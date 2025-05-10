@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import type { Task, Difficulty } from '../types/Task';
 import { v4 as uuidv4 } from 'uuid';
-import { useProfileContext } from './Profile';  // Import for accessing Profile context
+//import { useProfileContext } from './Profile';  // Import for accessing Profile context
 
 function Tasks() {
-  const {updateTaskStats } = useProfileContext();
+  //const {updateTaskStats } = useProfileContext();
   
   const savedTasks = localStorage.getItem('tasks');
   const initialTasks = savedTasks ? JSON.parse(savedTasks) : [];
@@ -68,7 +68,7 @@ function Tasks() {
 
           setCoins((prevCoins) => prevCoins + reward);
 
-          updateTaskStats(task.difficulty as 'easy' | 'medium' | 'hard'); // Use the updateTaskStats method here
+          //updateTaskStats(task.difficulty as 'easy' | 'medium' | 'hard'); // Use the updateTaskStats method here
 
           setDifficultyStats((prevStats) => ({
             ...prevStats,
