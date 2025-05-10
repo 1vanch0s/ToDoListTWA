@@ -11,8 +11,16 @@ function Rewards() {
 
   // Состояние для списка наград
   const [rewards, setRewards] = useState<Reward[]>(validRewards);
+
   // Состояние для валюты пользователя
-  const [currency, setCurrency] = useState(100); // Начальный баланс валюты
+  const [currency, setCurrency] = useState<number>(() => {
+    const saved = localStorage.getItem('coins');
+    return saved ? parseInt(saved) : 0;
+  }); 
+  useEffect(() => {
+  localStorage.setItem('coins', currency.toString());
+}, [currency]);
+  
   // Состояние для ввода новой награды
   const [newRewardTitle, setNewRewardTitle] = useState('');
   const [newRewardCost, setNewRewardCost] = useState(0);
