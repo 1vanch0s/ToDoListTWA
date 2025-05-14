@@ -50,6 +50,8 @@ const Tasks: React.FC = () => {
   const [newTaskDifficulty, setNewTaskDifficulty] = useState<"easy" | "medium" | "hard">("easy");
   const [showLevelUpPopup, setShowLevelUpPopup] = useState(false);
   const [newLevel, setNewLevel] = useState<number | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false); // Состояние для завершённых задач
+  const [showFailed, setShowFailed] = useState(false); // Состояние для проваленных задач
 
   useEffect(() => {
     const storedTasks = localStorage.getItem("tasks");
@@ -151,6 +153,11 @@ const Tasks: React.FC = () => {
     localStorage.setItem("stats", JSON.stringify(stats));
   };
 
+  // Фильтруем задачи
+  const pendingTasks = tasks.filter((task) => task.status === "pending");
+  const completedTasks = tasks.filter((task) => task.status === "completed");
+  const failedTasks = tasks.filter((task) => task.status === "failed");
+
   return (
     <div>
       <h1>Задачи</h1>
@@ -171,19 +178,58 @@ const Tasks: React.FC = () => {
         </select>
         <button onClick={addTask}>Добавить</button>
       </div>
+      <h2>Текущие задачи</h2>
       <ul>
-        {tasks.map((task) => (
-          <li key={task.id}>
-            {task.title} ({task.difficulty}) - {task.status}
-            {task.status === "pending" && (
-              <>
-                <button onClick={() => markTaskAsCompleted(task.id)}>Выполнено</button>
-                <button onClick={() => markTaskAsFailed(task.id)}>Провалено</button>
-              </>
-            )}
-          </li>
-        ))}
+        {pendingTasks.length === 0 ? (
+          <li>Нет текущих задач</li>
+        ) : (
+          pendingTasks.map((task) => (
+            <li key={task.id}>
+              {task.title} ({task.difficulty}) - {task.status}
+              <button onClick={() => markTaskAsCompleted(task.id)}>Выполнено</button>
+              <button onClick={() => markTaskAsFailed(task.id)}>Провалено</button>
+            </li>
+          ))
+        )}
       </ul>
+      <h2
+        onClick={() => setShowCompleted(!showCompleted)}
+        style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+      >
+        Выполненные задачи {showCompleted ? "▲" : "▼"}
+      </h2>
+      {showCompleted && (
+        <ul>
+          {completedTasks.length === 0 ? (
+            <li>Нет завершённых задач</li>
+          ) : (
+            completedTasks.map((task) => (
+              <li key={task.id}>
+                {task.title} ({task.difficulty}) - {task.status}
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+      <h2
+        onClick={() => setShowFailed(!showFailed)}
+        style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+      >
+        Проваленные задачи {showFailed ? "▲" : "▼"}
+      </h2>
+      {showFailed && (
+        <ul>
+          {failedTasks.length === 0 ? (
+            <li>Нет проваленных задач</li>
+          ) : (
+            failedTasks.map((task) => (
+              <li key={task.id}>
+                {task.title} ({task.difficulty}) - {task.status}
+              </li>
+            ))
+          )}
+        </ul>
+      )}
 
       {/* Попап для нового уровня */}
       {showLevelUpPopup && newLevel && (

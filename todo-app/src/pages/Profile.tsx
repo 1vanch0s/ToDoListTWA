@@ -8,6 +8,14 @@ interface Stats {
   level: number;
 }
 
+interface Task {
+  id: string;
+  title: string;
+  status: "pending" | "completed" | "failed";
+  coins: number;
+  difficulty: "easy" | "medium" | "hard";
+}
+
 const initialStats: Stats = {
   completed: { easy: 0, medium: 0, hard: 0 },
   failed: { easy: 0, medium: 0, hard: 0 },
@@ -73,10 +81,19 @@ const Profile: React.FC = () => {
   const totalXpNeeded = nextLevelXp - currentLevelXp; // XP до следующего уровня
   const progressPercent = Math.min((progressXp / totalXpNeeded) * 100, 100);
 
-  // Функция для сброса статистики
+  // Функция для сброса статистики и задач
   const resetStats = () => {
+    // Сбрасываем статистику
     localStorage.setItem("stats", JSON.stringify(initialStats));
     setStats(initialStats);
+
+    // Удаляем завершённые и проваленные задачи
+    const storedTasks = localStorage.getItem("tasks");
+    if (storedTasks) {
+      const parsedTasks: Task[] = JSON.parse(storedTasks);
+      const pendingTasks = parsedTasks.filter((task) => task.status === "pending");
+      localStorage.setItem("tasks", JSON.stringify(pendingTasks));
+    }
   };
 
   return (
