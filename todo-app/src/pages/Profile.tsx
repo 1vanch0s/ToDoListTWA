@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import '../styles.css';
 
 interface Stats {
   completed: { easy: number; medium: number; hard: number };
@@ -6,14 +7,9 @@ interface Stats {
   totalCoins: number;
   xp: number;
   level: number;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  status: "pending" | "completed" | "failed";
-  coins: number;
-  difficulty: "easy" | "medium" | "hard";
+  totalEarnedCoins: number;
+  totalEarnedXp: number;
+  purchases: number;
 }
 
 const initialStats: Stats = {
@@ -22,127 +18,147 @@ const initialStats: Stats = {
   totalCoins: 0,
   xp: 0,
   level: 1,
+  totalEarnedCoins: 0,
+  totalEarnedXp: 0,
+  purchases: 0,
 };
 
-// Функция для вычисления XP, необходимого для достижения уровня
+// Функция для вычисления XP, необходимого для уровня
 const xpForLevel = (level: number): number => {
   if (level <= 1) return 0;
   let totalXp = 0;
   for (let i = 2; i <= level; i++) {
-    const tier = Math.floor((i - 1) / 10); // Каждые 10 уровней увеличиваем требование
+    const tier = Math.floor((i - 1) / 10);
     totalXp += 100 + tier * 50;
   }
   return totalXp;
 };
 
-// Функция для вычисления уровня на основе XP
-const calculateLevel = (xp: number): number => {
-  let level = 1;
-  while (xpForLevel(level + 1) <= xp) {
-    level++;
-  }
-  return level;
-};
+// Функция для вычисления следующего уровня
+const nextLevelXp = (level: number): number => xpForLevel(level + 1);
 
 const Profile: React.FC = () => {
   const [stats, setStats] = useState<Stats>(initialStats);
+  const userName = "Имя пользователя";
 
   useEffect(() => {
-    const updateStats = () => {
-      const storedStats = localStorage.getItem("stats");
-      if (storedStats) {
-        const parsedStats = JSON.parse(storedStats);
-        // Проверяем и исправляем уровень
-        const correctedLevel = calculateLevel(parsedStats.xp || 0);
-        const correctedStats: Stats = {
-          ...parsedStats,
-          level: correctedLevel,
-        };
-        setStats(correctedStats);
-        localStorage.setItem("stats", JSON.stringify(correctedStats));
-      }
-    };
-
-    updateStats();
-
-    // Слушаем изменения в localStorage
-    window.addEventListener("storage", updateStats);
-    return () => window.removeEventListener("storage", updateStats);
+    const storedStats = localStorage.getItem("stats");
+    if (storedStats) {
+      const parsedStats: Stats = JSON.parse(storedStats);
+      const calculatedLevel = parsedStats.xp >= nextLevelXp(parsedStats.level)
+        ? parsedStats.level + 1
+        : parsedStats.level;
+      setStats({ ...parsedStats, level: calculatedLevel });
+    }
   }, []);
 
-  // Вычисляем общий подсчёт
-  const totalCompleted = stats.completed.easy + stats.completed.medium + stats.completed.hard;
-  const totalFailed = stats.failed.easy + stats.failed.medium + stats.failed.hard;
+  const progress = stats.xp > 0
+    ? Math.min((stats.xp - xpForLevel(stats.level)) / (nextLevelXp(stats.level) - xpForLevel(stats.level)) * 100, 100)
+    : 0;
 
-  // Вычисляем прогресс для прогресс-бара
-  const currentLevelXp = xpForLevel(stats.level); // XP для текущего уровня
-  const nextLevelXp = xpForLevel(stats.level + 1); // XP для следующего уровня
-  const progressXp = stats.xp - currentLevelXp; // Текущий прогресс на уровне
-  const totalXpNeeded = nextLevelXp - currentLevelXp; // XP до следующего уровня
-  const progressPercent = Math.min((progressXp / totalXpNeeded) * 100, 100);
-
-  // Функция для сброса статистики и задач
   const resetStats = () => {
-    // Сбрасываем статистику
     localStorage.setItem("stats", JSON.stringify(initialStats));
+    localStorage.setItem("rewards", JSON.stringify([]));
+    localStorage.setItem("tasks", JSON.stringify([])); // Добавляем сброс задач
     setStats(initialStats);
-
-    // Удаляем завершённые и проваленные задачи
-    const storedTasks = localStorage.getItem("tasks");
-    if (storedTasks) {
-      const parsedTasks: Task[] = JSON.parse(storedTasks);
-      const pendingTasks = parsedTasks.filter((task) => task.status === "pending");
-      localStorage.setItem("tasks", JSON.stringify(pendingTasks));
-    }
   };
 
   return (
     <div>
-      <h1>Профиль</h1>
-      <h2>Уровень и опыт</h2>
-      <p>Текущий уровень: {stats.level}</p>
-      <p>Опыт: {progressXp} / {totalXpNeeded} XP</p>
-      <div style={{ width: "200px", backgroundColor: "#e0e0e0", borderRadius: "5px" }}>
-        <div
-          style={{
-            width: `${progressPercent}%`,
-            maxWidth: "100%", // Предотвращаем выход за границы
-            height: "20px",
-            backgroundColor: "#4caf50",
-            borderRadius: "5px",
-          }}
-        ></div>
-      </div>
-      <h2>Статистика</h2>
-      <p>Всего выполнено задач: {totalCompleted}</p>
-      <p>Выполненные задачи:</p>
-      <ul>
-        <li>Лёгкие: {stats.completed.easy}</li>
-        <li>Средние: {stats.completed.medium}</li>
-        <li>Сложные: {stats.completed.hard}</li>
-      </ul>
-      <p>Всего провалено задач: {totalFailed}</p>
-      <p>Проваленные задачи:</p>
-      <ul>
-        <li>Лёгкие: {stats.failed.easy}</li>
-        <li>Средние: {stats.failed.medium}</li>
-        <li>Сложные: {stats.failed.hard}</li>
-      </ul>
-      <p>Всего монет: {stats.totalCoins}</p>
-      <button
-        onClick={resetStats}
-        style={{
-          marginTop: "20px",
-          padding: "10px",
-          backgroundColor: "#ff4444",
-          color: "#fff",
-          border: "none",
-          borderRadius: "5px",
-          cursor: "pointer",
-        }}
-      >
-        Сбросить статистику
-      </button>
+      <main className="main">
+        <div className="profile-header">
+          <div className="avatar"></div>
+          <div>
+            <h2>{userName}</h2>
+            <div className="level-circle">
+              <svg width="80" height="80">
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="35"
+                  stroke="#E0E7FF"
+                  strokeWidth="5"
+                  fill="none"
+                />
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="35"
+                  stroke="#3B82F6"
+                  strokeWidth="5"
+                  fill="none"
+                  strokeDasharray="219.8"
+                  strokeDashoffset={219.8 - (219.8 * progress / 100)}
+                  transform="rotate(-90 40 40)"
+                />
+                <text
+                  x="40"
+                  y="42"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize="16"
+                  fill="#000"
+                >
+                  {stats.level} ур
+                </text>
+              </svg>
+              <div className="xp-text">
+                {stats.xp} XP / {nextLevelXp(stats.level)} XP
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="stats-card">
+          <h3>Статистика</h3>
+          <div className="stats-section">
+            <div>
+              <p>Заданий выполнено:</p>
+              <p>Лёгких заданий:</p>
+              <p>Средних заданий:</p>
+              <p>Сложных заданий:</p>
+            </div>
+            <div>
+              <p>{stats.completed.easy + stats.completed.medium + stats.completed.hard}</p>
+              <p>{stats.completed.easy}</p>
+              <p>{stats.completed.medium}</p>
+              <p>{stats.completed.hard}</p>
+            </div>
+          </div>
+          <div className="stats-section">
+            <div>
+              <p>Заданий провалено:</p>
+              <p>Лёгких заданий:</p>
+              <p>Средних заданий:</p>
+              <p>Сложных заданий:</p>
+            </div>
+            <div>
+              <p>{stats.failed.easy + stats.failed.medium + stats.failed.hard}</p>
+              <p>{stats.failed.easy}</p>
+              <p>{stats.failed.medium}</p>
+              <p>{stats.failed.hard}</p>
+            </div>
+          </div>
+          <div className="stats-section">
+            <div>
+              <p>Монет заработано:</p>
+              <p>Наград куплено:</p>
+              <p>Всего очков опыта:</p>
+            </div>
+            <div>
+              <p>{stats.totalEarnedCoins || 0}</p>
+              <p>{stats.purchases || 0}</p>
+              <p>{stats.totalEarnedXp || 0}</p>
+            </div>
+          </div>
+          <button onClick={resetStats} className="button reset-button">
+            Сбросить статистику
+          </button>
+        </div>
+        <div className="stats-card future-section">
+          <h3>Визуализация статистики в будущем</h3>
+          <p>(Placeholder для графиков)</p>
+        </div>
+      </main>
     </div>
   );
 };

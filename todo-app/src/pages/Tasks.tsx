@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
+import '../styles.css';
 
 interface Task {
   id: string;
   title: string;
+  deadline?: string;
+  description: string;
   status: "pending" | "completed" | "failed";
   coins: number;
   difficulty: "easy" | "medium" | "hard";
@@ -14,6 +17,9 @@ interface Stats {
   totalCoins: number;
   xp: number;
   level: number;
+  totalEarnedCoins: number;
+  totalEarnedXp: number;
+  purchases: number;
 }
 
 const initialStats: Stats = {
@@ -22,6 +28,9 @@ const initialStats: Stats = {
   totalCoins: 0,
   xp: 0,
   level: 1,
+  totalEarnedCoins: 0,
+  totalEarnedXp: 0,
+  purchases: 0,
 };
 
 // Функция для вычисления XP, необходимого для достижения уровня
@@ -29,7 +38,7 @@ const xpForLevel = (level: number): number => {
   if (level <= 1) return 0;
   let totalXp = 0;
   for (let i = 2; i <= level; i++) {
-    const tier = Math.floor((i - 1) / 10); // Каждые 10 уровней увеличиваем требование
+    const tier = Math.floor((i - 1) / 10);
     totalXp += 100 + tier * 50;
   }
   return totalXp;
@@ -44,67 +53,65 @@ const calculateLevel = (xp: number): number => {
   return level;
 };
 
-const Tasks: React.FC = () => {
+interface TasksProps {
+  updateCoins: () => void;
+}
+
+const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskDifficulty, setNewTaskDifficulty] = useState<"easy" | "medium" | "hard">("easy");
+  const [newTask, setNewTask] = useState({ title: "", deadline: "", description: "", difficulty: "easy" as "easy" | "medium" | "hard" });
   const [showLevelUpPopup, setShowLevelUpPopup] = useState(false);
   const [newLevel, setNewLevel] = useState<number | null>(null);
-  const [showCompleted, setShowCompleted] = useState(false); // Состояние для завершённых задач
-  const [showFailed, setShowFailed] = useState(false); // Состояние для проваленных задач
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [showFailed, setShowFailed] = useState(false);
+  const [showAddPopup, setShowAddPopup] = useState(false);
+  const [showDetailPopup, setShowDetailPopup] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
     const storedTasks = localStorage.getItem("tasks");
     if (storedTasks) {
       setTasks(JSON.parse(storedTasks));
     }
-    // Инициализация статистики
     const storedStats = localStorage.getItem("stats");
-    if (!storedStats) {
-      localStorage.setItem("stats", JSON.stringify(initialStats));
-    } else {
-      // Миграция и проверка данных
+    if (storedStats) {
       const parsedStats = JSON.parse(storedStats);
-      let migratedStats: Stats;
-      if (typeof parsedStats.completed === "number") {
-        migratedStats = {
-          completed: { easy: parsedStats.completed || 0, medium: 0, hard: 0 },
-          failed: { easy: parsedStats.failed || 0, medium: 0, hard: 0 },
-          totalCoins: parsedStats.totalCoins || 0,
-          xp: 0,
-          level: 1,
-        };
-      } else {
-        // Проверяем и исправляем уровень на основе XP
-        const correctedLevel = calculateLevel(parsedStats.xp || 0);
-        migratedStats = {
-          ...parsedStats,
-          xp: parsedStats.xp || 0,
-          level: correctedLevel,
-        };
-      }
+      const migratedStats = {
+        ...initialStats,
+        ...parsedStats,
+        completed: parsedStats.completed || initialStats.completed,
+        failed: parsedStats.failed || initialStats.failed,
+        totalCoins: parsedStats.totalCoins || initialStats.totalCoins,
+        xp: parsedStats.xp || initialStats.xp,
+        level: calculateLevel(parsedStats.xp || 0),
+      };
       localStorage.setItem("stats", JSON.stringify(migratedStats));
+    } else {
+      localStorage.setItem("stats", JSON.stringify(initialStats));
     }
   }, []);
 
   const addTask = () => {
-    if (newTaskTitle.trim() === "") return;
+    if (newTask.title.trim() === "") return;
 
-    const newTask: Task = {
+    const newTaskItem: Task = {
       id: Date.now().toString(),
-      title: newTaskTitle,
+      title: newTask.title,
+      deadline: newTask.deadline || "",
+      description: newTask.description,
       status: "pending",
-      coins: newTaskDifficulty === "easy" ? 10 : newTaskDifficulty === "medium" ? 20 : 30,
-      difficulty: newTaskDifficulty,
+      coins: newTask.difficulty === "easy" ? 10 : newTask.difficulty === "medium" ? 20 : 30,
+      difficulty: newTask.difficulty,
     };
 
     setTasks((prevTasks) => {
-      const updatedTasks = [...prevTasks, newTask];
+      const updatedTasks = [...prevTasks, newTaskItem];
       localStorage.setItem("tasks", JSON.stringify(updatedTasks));
       return updatedTasks;
     });
 
-    setNewTaskTitle("");
+    setNewTask({ title: "", deadline: "", description: "", difficulty: "easy" });
+    setShowAddPopup(false);
   };
 
   const markTaskAsCompleted = (taskId: string) => {
@@ -112,29 +119,29 @@ const Tasks: React.FC = () => {
     if (!task) return;
 
     const updatedTasks = tasks.map((t) =>
-      t.id === taskId ? { ...t, status: "completed" as const } : t
+      t.id === taskId ? { ...t, status: "completed" as Task["status"] } : t
     );
     setTasks(updatedTasks);
     localStorage.setItem("tasks", JSON.stringify(updatedTasks));
 
-    // Обновляем статистику
     const stats = JSON.parse(localStorage.getItem("stats") || JSON.stringify(initialStats));
     stats.completed[task.difficulty] = (stats.completed[task.difficulty] || 0) + 1;
     stats.totalCoins += task.coins;
-
-    // Начисляем XP и проверяем уровень
-    const xpGained = task.difficulty === "easy" ? 10 : task.difficulty === "medium" ? 20 : 30;
     const oldLevel = stats.level;
-    stats.xp += xpGained;
+    const xpReward = task.difficulty === "easy" ? 10 : task.difficulty === "medium" ? 20 : 30;
+    stats.xp += xpReward;
     stats.level = calculateLevel(stats.xp);
+    stats.totalEarnedCoins = (stats.totalEarnedCoins || 0) + task.coins;
+    stats.totalEarnedXp = (stats.totalEarnedXp || 0) + xpReward;
 
     if (stats.level > oldLevel) {
       setNewLevel(stats.level);
       setShowLevelUpPopup(true);
-      setTimeout(() => setShowLevelUpPopup(false), 3000); // Закрываем попап через 3 секунды
+      setTimeout(() => setShowLevelUpPopup(false), 3000);
     }
 
     localStorage.setItem("stats", JSON.stringify(stats));
+    updateCoins();
   };
 
   const markTaskAsFailed = (taskId: string) => {
@@ -142,111 +149,174 @@ const Tasks: React.FC = () => {
     if (!task) return;
 
     const updatedTasks = tasks.map((t) =>
-      t.id === taskId ? { ...t, status: "failed" as const } : t
+      t.id === taskId ? { ...t, status: "failed" as Task["status"] } : t
     );
     setTasks(updatedTasks);
     localStorage.setItem("tasks", JSON.stringify(updatedTasks));
 
-    // Обновляем статистику
     const stats = JSON.parse(localStorage.getItem("stats") || JSON.stringify(initialStats));
     stats.failed[task.difficulty] = (stats.failed[task.difficulty] || 0) + 1;
     localStorage.setItem("stats", JSON.stringify(stats));
   };
 
-  // Фильтруем задачи
   const pendingTasks = tasks.filter((task) => task.status === "pending");
   const completedTasks = tasks.filter((task) => task.status === "completed");
   const failedTasks = tasks.filter((task) => task.status === "failed");
 
   return (
     <div>
-      <h1>Задачи</h1>
-      <div>
-        <input
-          type="text"
-          value={newTaskTitle}
-          onChange={(e) => setNewTaskTitle(e.target.value)}
-          placeholder="Новая задача"
-        />
-        <select
-          value={newTaskDifficulty}
-          onChange={(e) => setNewTaskDifficulty(e.target.value as "easy" | "medium" | "hard")}
+      <main className="main">
+        {pendingTasks.map((task) => (
+          <div
+            key={task.id}
+            onClick={() => { setSelectedTask(task); setShowDetailPopup(true); }}
+            className="task-card"
+          >
+            <div>
+              <h3>{task.title}</h3>
+              {task.deadline && (
+                <div className="task-meta">
+                  <span>⏰ {task.deadline}</span>
+                </div>
+              )}
+              <div className="task-meta">
+                Сложность: {task.difficulty.charAt(0).toUpperCase() + task.difficulty.slice(1)}
+              </div>
+            </div>
+            <div>
+              <button
+                onClick={(e) => { e.stopPropagation(); markTaskAsFailed(task.id); }}
+                className="button fail-button"
+              >
+                Провалено
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); markTaskAsCompleted(task.id); }}
+                className="button success-button"
+              >
+                Сделано
+              </button>
+            </div>
+          </div>
+        ))}
+        <h2
+          onClick={() => setShowCompleted(!showCompleted)}
+          className="collapsible-header"
         >
-          <option value="easy">Лёгкая</option>
-          <option value="medium">Средняя</option>
-          <option value="hard">Сложная</option>
-        </select>
-        <button onClick={addTask}>Добавить</button>
-      </div>
-      <h2>Текущие задачи</h2>
-      <ul>
-        {pendingTasks.length === 0 ? (
-          <li>Нет текущих задач</li>
-        ) : (
-          pendingTasks.map((task) => (
-            <li key={task.id}>
-              {task.title} ({task.difficulty}) - {task.status}
-              <button onClick={() => markTaskAsCompleted(task.id)}>Выполнено</button>
-              <button onClick={() => markTaskAsFailed(task.id)}>Провалено</button>
-            </li>
-          ))
+          Выполненные задачи {showCompleted ? "▲" : "▼"}
+        </h2>
+        {showCompleted && (
+          <ul className="task-list">
+            {completedTasks.map((task) => (
+              <li
+                key={task.id}
+                onClick={() => { setSelectedTask(task); setShowDetailPopup(true); }}
+                className="task-card completed-task"
+              >
+                <div>
+                  <h3>{task.title} ({task.difficulty}) - {task.status}</h3>
+                  {task.deadline && (
+                    <div className="task-meta">
+                      <span>⏰ {task.deadline}</span>
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
-      </ul>
-      <h2
-        onClick={() => setShowCompleted(!showCompleted)}
-        style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-      >
-        Выполненные задачи {showCompleted ? "▲" : "▼"}
-      </h2>
-      {showCompleted && (
-        <ul>
-          {completedTasks.length === 0 ? (
-            <li>Нет завершённых задач</li>
-          ) : (
-            completedTasks.map((task) => (
-              <li key={task.id}>
-                {task.title} ({task.difficulty}) - {task.status}
+        <h2
+          onClick={() => setShowFailed(!showFailed)}
+          className="collapsible-header"
+        >
+          Проваленные задачи {showFailed ? "▲" : "▼"}
+        </h2>
+        {showFailed && (
+          <ul className="task-list">
+            {failedTasks.map((task) => (
+              <li
+                key={task.id}
+                onClick={() => { setSelectedTask(task); setShowDetailPopup(true); }}
+                className="task-card failed-task"
+              >
+                <div>
+                  <h3>{task.title} ({task.difficulty}) - {task.status}</h3>
+                  {task.deadline && (
+                    <div className="task-meta">
+                      <span>⏰ {task.deadline}</span>
+                    </div>
+                  )}
+                </div>
               </li>
-            ))
-          )}
-        </ul>
+            ))}
+          </ul>
+        )}
+      </main>
+      <button
+        onClick={() => setShowAddPopup(true)}
+        className="add-button"
+      >
+        +
+      </button>
+
+      {/* Попап для добавления задачи */}
+      {showAddPopup && (
+        <div className="popup">
+          <h2>Добавить задачу</h2>
+          <input
+            type="text"
+            value={newTask.title}
+            onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+            placeholder="Название"
+            className="popup-input"
+          />
+          <input
+            type="datetime-local"
+            value={newTask.deadline}
+            onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+            className="popup-input"
+            placeholder="Дедлайн (опционально)"
+          />
+          <textarea
+            value={newTask.description}
+            onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+            placeholder="Описание"
+            className="popup-textarea"
+          />
+          <select
+            value={newTask.difficulty}
+            onChange={(e) => setNewTask({ ...newTask, difficulty: e.target.value as "easy" | "medium" | "hard" })}
+            className="popup-select"
+          >
+            <option value="easy">Лёгкая</option>
+            <option value="medium">Средняя</option>
+            <option value="hard">Сложная</option>
+          </select>
+          <button onClick={addTask} className="button primary-button">
+            Добавить
+          </button>
+          <button onClick={() => setShowAddPopup(false)} className="button close-button">
+            Закрыть
+          </button>
+        </div>
       )}
-      <h2
-        onClick={() => setShowFailed(!showFailed)}
-        style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
-      >
-        Проваленные задачи {showFailed ? "▲" : "▼"}
-      </h2>
-      {showFailed && (
-        <ul>
-          {failedTasks.length === 0 ? (
-            <li>Нет проваленных задач</li>
-          ) : (
-            failedTasks.map((task) => (
-              <li key={task.id}>
-                {task.title} ({task.difficulty}) - {task.status}
-              </li>
-            ))
-          )}
-        </ul>
+
+      {/* Попап с подробной информацией */}
+      {showDetailPopup && selectedTask && (
+        <div className="popup">
+          <h2>{selectedTask.title}</h2>
+          {selectedTask.deadline && <p><strong>Дедлайн:</strong> {selectedTask.deadline}</p>}
+          <p><strong>Сложность:</strong> {selectedTask.difficulty.charAt(0).toUpperCase() + selectedTask.difficulty.slice(1)}</p>
+          <p><strong>Описание:</strong> {selectedTask.description || "Нет описания"}</p>
+          <button onClick={() => setShowDetailPopup(false)} className="button close-button">
+            Закрыть
+          </button>
+        </div>
       )}
 
       {/* Попап для нового уровня */}
       {showLevelUpPopup && newLevel && (
-        <div
-          style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            backgroundColor: "#fff",
-            padding: "20px",
-            border: "2px solid #4caf50",
-            borderRadius: "10px",
-            boxShadow: "0 0 10px rgba(0,0,0,0.3)",
-            zIndex: 1000,
-          }}
-        >
+        <div className="popup">
           <h2>Поздравляем!</h2>
           <p>Вы достигли уровня {newLevel}!</p>
         </div>
