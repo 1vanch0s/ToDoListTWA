@@ -52,14 +52,20 @@ const App: React.FC = () => {
           </div>
         </header>
         <nav className="nav">
-          <NavLink to="/" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Задачи</NavLink>
-          <NavLink to="/rewards" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Награды</NavLink>
-          <NavLink to="/profile" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Профиль</NavLink>
+          <NavLink to="/" className={({ isActive }) => isActive ? "nav-button active" : "nav-button"}>
+            Задачи
+          </NavLink>
+          <NavLink to="/rewards" className={({ isActive }) => isActive ? "nav-button active" : "nav-button"}>
+            Награды
+          </NavLink>
+          <NavLink to="/profile" className={({ isActive }) => isActive ? "nav-button active" : "nav-button"}>
+            Профиль
+          </NavLink>
         </nav>
         <Routes>
           <Route path="/" element={<Tasks updateCoins={updateCoins} />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/rewards" element={<Rewards/>} />
+          <Route path="/rewards" element={<Rewards />} />
         </Routes>
       </div>
     </Router>
