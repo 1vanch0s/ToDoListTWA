@@ -26,12 +26,22 @@ const initialStats: Stats = {
 
 // Функция для вычисления XP, необходимого для достижения уровня
 const xpForLevel = (level: number): number => {
-  return level > 1 ? (level - 1) * 100 : 0;
+  if (level <= 1) return 0;
+  let totalXp = 0;
+  for (let i = 2; i <= level; i++) {
+    const tier = Math.floor((i - 1) / 10); // Каждые 10 уровней увеличиваем требование
+    totalXp += 100 + tier * 50;
+  }
+  return totalXp;
 };
 
 // Функция для вычисления уровня на основе XP
 const calculateLevel = (xp: number): number => {
-  return Math.floor(Math.sqrt(xp / 50) + 1);
+  let level = 1;
+  while (xpForLevel(level + 1) <= xp) {
+    level++;
+  }
+  return level;
 };
 
 const Tasks: React.FC = () => {
