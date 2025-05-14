@@ -1,34 +1,65 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes, NavLink } from "react-router-dom";
 import Tasks from "./pages/Tasks";
 import Profile from "./pages/Profile";
+import './styles.css';
 import Rewards from "./pages/Rewards";
+
+interface Stats {
+  completed: { easy: number; medium: number; hard: number };
+  failed: { easy: number; medium: number; hard: number };
+  totalCoins: number;
+  xp: number;
+  level: number;
+}
+
+const initialStats: Stats = {
+  completed: { easy: 0, medium: 0, hard: 0 },
+  failed: { easy: 0, medium: 0, hard: 0 },
+  totalCoins: 0,
+  xp: 0,
+  level: 1,
+};
 
 const App: React.FC = () => {
   const userName = "Имя пользователя";
-  const coins = 100;
+  const [coins, setCoins] = useState<number>(0);
+
+  const updateCoins = () => {
+    const storedStats = localStorage.getItem("stats");
+    if (storedStats) {
+      const parsedStats: Stats = JSON.parse(storedStats);
+      setCoins(parsedStats.totalCoins || 0);
+    }
+  };
+
+  useEffect(() => {
+    updateCoins();
+    window.addEventListener("storage", updateCoins);
+    return () => window.removeEventListener("storage", updateCoins);
+  }, []);
 
   return (
     <Router>
       <div>
-        <header style={{ backgroundColor: "#1E3A8A", color: "#fff", padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ width: "30px", height: "30px", backgroundColor: "#000", borderRadius: "50%", marginRight: "10px" }}></div>
+        <header className="header">
+          <div className="user-info">
+            <div className="avatar"></div>
             <span>{userName}</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <span>{coins} <span style={{ fontSize: "20px" }}>💰</span></span>
+          <div className="coins">
+            <span>{coins} 💰</span>
           </div>
         </header>
-        <nav style={{ backgroundColor: "#93C5FD", padding: "10px", display: "flex", justifyContent: "space-around" }}>
-          <NavLink to="/" style={({ isActive }) => ({ color: isActive ? "#1E3A8A" : "#000", fontWeight: isActive ? "bold" : "normal", textDecoration: "none" })}>Задачи</NavLink>
-          <NavLink to="/rewards" style={({ isActive }) => ({ color: isActive ? "#1E3A8A" : "#000", fontWeight: isActive ? "bold" : "normal", textDecoration: "none" })}>Награды</NavLink>
-          <NavLink to="/profile" style={({ isActive }) => ({ color: isActive ? "#1E3A8A" : "#000", fontWeight: isActive ? "bold" : "normal", textDecoration: "none" })}>Профиль</NavLink>
+        <nav className="nav">
+          <NavLink to="/" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Задачи</NavLink>
+          <NavLink to="/rewards" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Награды</NavLink>
+          <NavLink to="/profile" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Профиль</NavLink>
         </nav>
         <Routes>
-          <Route path="/" element={<Tasks />} />
+          <Route path="/" element={<Tasks updateCoins={updateCoins} />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/rewards" element={<Rewards />} />
+          <Route path="/rewards" element={<Rewards/>} />
         </Routes>
       </div>
     </Router>

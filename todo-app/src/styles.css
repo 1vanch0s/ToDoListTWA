@@ -3,24 +3,203 @@ body {
   font-family: Arial, sans-serif;
 }
 
+.header {
+  background-color: #1E3A8A;
+  color: #fff;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  background-color: #000;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.coins {
+  display: flex;
+  align-items: center;
+}
+
+.coins span {
+  font-size: 20px;
+}
+
+.nav {
+  background-color: #93C5FD;
+  padding: 10px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.nav-link {
+  color: #000;
+  text-decoration: none;
+  font-weight: normal;
+}
+
+.nav-link.active {
+  color: #1E3A8A;
+  font-weight: bold;
+}
+
+.main {
+  padding: 20px;
+  min-height: calc(100vh - 100px);
+}
+
+.task-card {
+  background-color: #3B82F6;
+  border-radius: 15px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.task-card h3 {
+  color: #000;
+  margin: 0 0 5px 0;
+}
+
+.task-meta {
+  color: #000;
+  font-size: 14px;
+}
+
+.button {
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.fail-button {
+  background-color: #EF4444;
+  color: #fff;
+  margin-right: 5px;
+}
+
+.fail-button:hover {
+  background-color: #DC2626;
+}
+
+.success-button {
+  background-color: #22C55E;
+  color: #fff;
+}
+
+.success-button:hover {
+  background-color: #16A34A;
+}
+
+.collapsible-header {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.task-list {
+  list-style: none;
+  padding: 0;
+}
+
+.task-item {
+  background-color: #E0E7FF;
+  border-radius: 15px;
+  padding: 15px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.empty-message {
+  color: #666;
+}
+
+.add-button {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 60px;
+  background-color: #3B82F6;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  z-index: 1000;
+  width: 300px;
+}
+
+.popup-input, .popup-select {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 5px;
+}
+
+.popup-textarea {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 5px;
+  height: 60px;
+}
+
+.primary-button {
+  background-color: #3B82F6;
+  color: #fff;
+}
+
+.close-button {
+  background-color: #EF4444;
+  color: #fff;
+  margin-left: 10px;
+}
+
 @media (max-width: 768px) {
-  main {
+  .main {
     padding: 10px;
   }
-  button[style*="width: 60px"] {
+  .add-button {
     width: 50px;
     height: 50px;
     font-size: 25px;
     bottom: 10px;
-    right: 10px;
   }
-  div[style*="width: 300px"] {
+  .popup {
     width: 90%;
   }
-  h3 {
+  .task-card h3 {
     font-size: 16px;
   }
-  div[style*="padding: 15px"] {
+  .task-card {
     padding: 10px;
   }
 }

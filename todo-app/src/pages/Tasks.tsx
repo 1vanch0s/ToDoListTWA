@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
+import '../styles.css';
 
 interface Task {
   id: string;
   title: string;
-  deadline: string;
+  deadline?: string; // Сделали дедлайн опциональным
   description: string;
   status: "pending" | "completed" | "failed";
   coins: number;
@@ -46,7 +47,11 @@ const calculateLevel = (xp: number): number => {
   return level;
 };
 
-const Tasks: React.FC = () => {
+interface TasksProps {
+  updateCoins: () => void;
+}
+
+const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState({ title: "", deadline: "", description: "", difficulty: "easy" as "easy" | "medium" | "hard" });
   const [showLevelUpPopup, setShowLevelUpPopup] = useState(false);
@@ -89,12 +94,12 @@ const Tasks: React.FC = () => {
   }, []);
 
   const addTask = () => {
-    if (newTask.title.trim() === "" || newTask.deadline.trim() === "") return;
+    if (newTask.title.trim() === "") return; // Только название обязательно
 
     const newTaskItem: Task = {
       id: Date.now().toString(),
       title: newTask.title,
-      deadline: newTask.deadline,
+      deadline: newTask.deadline || "", // Дедлайн опционален
       description: newTask.description,
       status: "pending",
       coins: newTask.difficulty === "easy" ? 10 : newTask.difficulty === "medium" ? 20 : 30,
@@ -116,7 +121,7 @@ const Tasks: React.FC = () => {
     if (!task) return;
 
     const updatedTasks = tasks.map((t) =>
-      t.id === taskId ? { ...t, status: "completed" } : t
+      t.id === taskId ? { ...t, status: "completed" as Task["status"] } : t
     );
     setTasks(updatedTasks);
     localStorage.setItem("tasks", JSON.stringify(updatedTasks));
@@ -135,6 +140,7 @@ const Tasks: React.FC = () => {
     }
 
     localStorage.setItem("stats", JSON.stringify(stats));
+    updateCoins(); // Вызов функции обновления монет
   };
 
   const markTaskAsFailed = (taskId: string) => {
@@ -142,7 +148,7 @@ const Tasks: React.FC = () => {
     if (!task) return;
 
     const updatedTasks = tasks.map((t) =>
-      t.id === taskId ? { ...t, status: "failed" } : t
+      t.id === taskId ? { ...t, status: "failed" as Task["status"] } : t
     );
     setTasks(updatedTasks);
     localStorage.setItem("tasks", JSON.stringify(updatedTasks));
@@ -158,61 +164,34 @@ const Tasks: React.FC = () => {
 
   return (
     <div>
-      <main style={{ padding: "20px", minHeight: "calc(100vh - 100px)" }}>
+      <main className="main">
         {pendingTasks.map((task) => (
           <div
             key={task.id}
             onClick={() => { setSelectedTask(task); setShowDetailPopup(true); }}
-            style={{
-              backgroundColor: "#3B82F6",
-              borderRadius: "15px",
-              padding: "15px",
-              marginBottom: "15px",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-              cursor: "pointer",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
+            className="task-card"
           >
             <div>
-              <h3 style={{ color: "#000", margin: "0 0 5px 0" }}>{task.title}</h3>
-              <div style={{ color: "#000", fontSize: "14px" }}>
-                <span>⏰ {task.deadline}</span>
+              <h3>{task.title}</h3>
+              {task.deadline && (
+                <div className="task-meta">
+                  <span>⏰ {task.deadline}</span>
+                </div>
+              )}
+              <div className="task-meta">
+                Сложность: {task.difficulty.charAt(0).toUpperCase() + task.difficulty.slice(1)}
               </div>
-              <div style={{ color: "#000", fontSize: "14px" }}>Сложность: {task.difficulty.charAt(0).toUpperCase() + task.difficulty.slice(1)}</div>
             </div>
             <div>
               <button
                 onClick={(e) => { e.stopPropagation(); markTaskAsFailed(task.id); }}
-                style={{
-                  backgroundColor: "#EF4444",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "5px",
-                  padding: "5px 10px",
-                  marginRight: "5px",
-                  cursor: "pointer",
-                  transition: "background-color 0.2s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#DC2626")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#EF4444")}
+                className="button fail-button"
               >
                 Провалено
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); markTaskAsCompleted(task.id); }}
-                style={{
-                  backgroundColor: "#22C55E",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "5px",
-                  padding: "5px 10px",
-                  cursor: "pointer",
-                  transition: "background-color 0.2s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#16A34A")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#22C55E")}
+                className="button success-button"
               >
                 Сделано
               </button>
@@ -221,54 +200,36 @@ const Tasks: React.FC = () => {
         ))}
         <h2
           onClick={() => setShowCompleted(!showCompleted)}
-          style={{ cursor: "pointer", display: "flex", alignItems: "center", marginTop: "20px" }}
+          className="collapsible-header"
         >
           Выполненные задачи {showCompleted ? "▲" : "▼"}
         </h2>
         {showCompleted && (
-          <ul style={{ listStyle: "none", padding: 0 }}>
+          <ul className="task-list">
             {completedTasks.length === 0 ? (
-              <li style={{ color: "#666" }}>Нет завершённых задач</li>
+              <li className="empty-message">Нет завершённых задач</li>
             ) : (
               completedTasks.map((task) => (
-                <li
-                  key={task.id}
-                  style={{
-                    backgroundColor: "#E0E7FF",
-                    borderRadius: "15px",
-                    padding: "15px",
-                    marginBottom: "10px",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                  }}
-                >
+                <li key={task.id} className="task-item">
                   {task.title} ({task.difficulty}) - {task.status}
                 </li>
-            ))
+              ))
             )}
           </ul>
         )}
         <h2
           onClick={() => setShowFailed(!showFailed)}
-          style={{ cursor: "pointer", display: "flex", alignItems: "center", marginTop: "20px" }}
+          className="collapsible-header"
         >
           Проваленные задачи {showFailed ? "▲" : "▼"}
         </h2>
         {showFailed && (
-          <ul style={{ listStyle: "none", padding: 0 }}>
+          <ul className="task-list">
             {failedTasks.length === 0 ? (
-              <li style={{ color: "#666" }}>Нет проваленных задач</li>
+              <li className="empty-message">Нет проваленных задач</li>
             ) : (
               failedTasks.map((task) => (
-                <li
-                  key={task.id}
-                  style={{
-                    backgroundColor: "#E0E7FF",
-                    borderRadius: "15px",
-                    padding: "15px",
-                    marginBottom: "10px",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                  }}
-                >
+                <li key={task.id} className="task-item">
                   {task.title} ({task.difficulty}) - {task.status}
                 </li>
               ))
@@ -278,79 +239,48 @@ const Tasks: React.FC = () => {
       </main>
       <button
         onClick={() => setShowAddPopup(true)}
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          width: "60px",
-          height: "60px",
-          backgroundColor: "#3B82F6",
-          color: "#fff",
-          border: "none",
-          borderRadius: "50%",
-          fontSize: "30px",
-          cursor: "pointer",
-          boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-        }}
+        className="add-button"
       >
         +
       </button>
 
       {/* Попап для добавления задачи */}
       {showAddPopup && (
-        <div
-          style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            backgroundColor: "#fff",
-            padding: "20px",
-            borderRadius: "10px",
-            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-            zIndex: 1000,
-            width: "300px",
-          }}
-        >
+        <div className="popup">
           <h2>Добавить задачу</h2>
           <input
             type="text"
             value={newTask.title}
             onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
             placeholder="Название"
-            style={{ width: "100%", marginBottom: "10px", padding: "5px" }}
+            className="popup-input"
           />
           <input
             type="datetime-local"
             value={newTask.deadline}
             onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
-            style={{ width: "100%", marginBottom: "10px", padding: "5px" }}
+            className="popup-input"
+            placeholder="Дедлайн (опционально)"
           />
           <textarea
             value={newTask.description}
             onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
             placeholder="Описание"
-            style={{ width: "100%", marginBottom: "10px", padding: "5px", height: "60px" }}
+            className="popup-textarea"
           />
           <select
             value={newTask.difficulty}
             onChange={(e) => setNewTask({ ...newTask, difficulty: e.target.value as "easy" | "medium" | "hard" })}
-            style={{ width: "100%", marginBottom: "10px", padding: "5px" }}
+            className="popup-select"
           >
             <option value="easy">Лёгкая</option>
             <option value="medium">Средняя</option>
             <option value="hard">Сложная</option>
           </select>
-          <button
-            onClick={addTask}
-            style={{ backgroundColor: "#3B82F6", color: "#fff", border: "none", padding: "10px", borderRadius: "5px", cursor: "pointer" }}
-          >
+          <button onClick={addTask} className="button primary-button">
             Добавить
           </button>
-          <button
-            onClick={() => setShowAddPopup(false)}
-            style={{ backgroundColor: "#EF4444", color: "#fff", border: "none", padding: "10px", borderRadius: "5px", cursor: "pointer", marginLeft: "10px" }}
-          >
+          <button onClick={() => setShowAddPopup(false)} className="button close-button">
             Закрыть
           </button>
         </div>
@@ -358,28 +288,12 @@ const Tasks: React.FC = () => {
 
       {/* Попап с подробной информацией */}
       {showDetailPopup && selectedTask && (
-        <div
-          style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            backgroundColor: "#fff",
-            padding: "20px",
-            borderRadius: "10px",
-            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-            zIndex: 1000,
-            width: "300px",
-          }}
-        >
+        <div className="popup">
           <h2>{selectedTask.title}</h2>
-          <p><strong>Дедлайн:</strong> {selectedTask.deadline}</p>
+          {selectedTask.deadline && <p><strong>Дедлайн:</strong> {selectedTask.deadline}</p>}
           <p><strong>Сложность:</strong> {selectedTask.difficulty.charAt(0).toUpperCase() + selectedTask.difficulty.slice(1)}</p>
           <p><strong>Описание:</strong> {selectedTask.description || "Нет описания"}</p>
-          <button
-            onClick={() => setShowDetailPopup(false)}
-            style={{ backgroundColor: "#EF4444", color: "#fff", border: "none", padding: "10px", borderRadius: "5px", cursor: "pointer", marginTop: "10px" }}
-          >
+          <button onClick={() => setShowDetailPopup(false)} className="button close-button">
             Закрыть
           </button>
         </div>
@@ -387,19 +301,7 @@ const Tasks: React.FC = () => {
 
       {/* Попап для нового уровня */}
       {showLevelUpPopup && newLevel && (
-        <div
-          style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            backgroundColor: "#fff",
-            padding: "20px",
-            borderRadius: "10px",
-            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-            zIndex: 1000,
-          }}
-        >
+        <div className="popup">
           <h2>Поздравляем!</h2>
           <p>Вы достигли уровня {newLevel}!</p>
         </div>
