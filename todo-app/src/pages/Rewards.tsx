@@ -1,71 +1,86 @@
-import { useState, useEffect } from 'react';
-import type { Reward } from '../types/Reward'; // Импортируем типы для награды
+import React, { useEffect, useState } from "react";
 
-// Страница наград
-function Rewards() {
-  const saved_rewards = localStorage.getItem('rewards');
-  const initial_rewards: Reward[] = saved_rewards ? JSON.parse(saved_rewards) : [];
+interface Reward {
+  id: string;
+  name: string;
+  cost: number;
+}
 
-  // Фильтруем пустые или некорректные награды, если нужно
-  const validRewards = initial_rewards.filter((reward: Reward) => reward.title && reward.cost > 0);
+interface Stats {
+  completed: { easy: number; medium: number; hard: number };
+  failed: { easy: number; medium: number; hard: number };
+  totalCoins: number;
+}
 
-  // Состояние для списка наград
-  const [rewards, setRewards] = useState<Reward[]>(validRewards);
+const initialStats: Stats = {
+  completed: { easy: 0, medium: 0, hard: 0 },
+  failed: { easy: 0, medium: 0, hard: 0 },
+  totalCoins: 0,
+};
 
-  // Состояние для валюты пользователя
-  const [currency, setCurrency] = useState<number>(() => {
-    const saved = localStorage.getItem('coins');
-    return saved ? parseInt(saved) : 0;
-  }); 
+const Rewards: React.FC = () => {
+  const [stats, setStats] = useState<Stats>(initialStats);
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [newRewardName, setNewRewardName] = useState("");
+  const [newRewardCost, setNewRewardCost] = useState<number>(0);
+
   useEffect(() => {
-  localStorage.setItem('coins', currency.toString());
-}, [currency]);
-  
-  // Состояние для ввода новой награды
-  const [newRewardTitle, setNewRewardTitle] = useState('');
-  const [newRewardCost, setNewRewardCost] = useState(0);
+    const updateStats = () => {
+      const storedStats = localStorage.getItem("stats");
+      if (storedStats) {
+        setStats(JSON.parse(storedStats));
+      }
+    };
 
-  useEffect(() => {
-    // Сохраняем награды в localStorage
-    localStorage.setItem('rewards', JSON.stringify(rewards));
-  }, [rewards]);
+    const storedRewards = localStorage.getItem("rewards");
+    if (storedRewards) {
+      setRewards(JSON.parse(storedRewards));
+    }
 
-  // Функция для добавления новой награды
+    updateStats();
+
+    window.addEventListener("storage", updateStats);
+    return () => window.removeEventListener("storage", updateStats);
+  }, []);
+
   const addReward = () => {
-    if (newRewardTitle.trim() === '' || newRewardCost <= 0) return;
+    if (newRewardName.trim() === "" || newRewardCost <= 0) return;
 
     const newReward: Reward = {
-      id: new Date().toISOString(),
-      title: newRewardTitle,
+      id: Date.now().toString(),
+      name: newRewardName,
       cost: newRewardCost,
     };
 
-    setRewards((prev) => [...prev, newReward]);
-    setNewRewardTitle('');
+    setRewards((prevRewards) => {
+      const updatedRewards = [...prevRewards, newReward];
+      localStorage.setItem("rewards", JSON.stringify(updatedRewards));
+      return updatedRewards;
+    });
+
+    setNewRewardName("");
     setNewRewardCost(0);
   };
 
-  // Функция для трат валюты на награду
-  const spendCurrency = (reward: Reward) => {
-    if (currency >= reward.cost) {
-      setCurrency(currency - reward.cost);
-      // Можете добавить логику для отслеживания потраченных наград, если нужно
-      alert(`Вы потратили ${reward.cost} на ${reward.title}`);
-    } else {
-      alert('Недостаточно валюты для покупки этой награды');
-    }
+  const purchaseReward = (rewardId: string) => {
+    const reward = rewards.find((r) => r.id === rewardId);
+    if (!reward || stats.totalCoins < reward.cost) return;
+
+    setStats((prevStats) => {
+      const updatedStats = { ...prevStats, totalCoins: prevStats.totalCoins - reward.cost };
+      localStorage.setItem("stats", JSON.stringify(updatedStats));
+      return updatedStats;
+    });
   };
 
   return (
-    <div style={{ padding: '1rem' }}>
-      <h2>Награды</h2>
-
-      {/* Форма добавления награды */}
-      <div style={{ marginBottom: '1rem' }}>
+    <div>
+      <h1>Награды</h1>
+      <div>
         <input
           type="text"
-          value={newRewardTitle}
-          onChange={(e) => setNewRewardTitle(e.target.value)}
+          value={newRewardName}
+          onChange={(e) => setNewRewardName(e.target.value)}
           placeholder="Название награды"
         />
         <input
@@ -73,26 +88,26 @@ function Rewards() {
           value={newRewardCost}
           onChange={(e) => setNewRewardCost(Number(e.target.value))}
           placeholder="Стоимость"
+          min="0"
         />
         <button onClick={addReward}>Добавить награду</button>
       </div>
-
-      {/* Отображаем текущие награды */}
-      <div>
-        <h3>Ваш баланс: {currency} монет</h3>
-        <ul>
-          {rewards.map((reward) => (
-            <li key={reward.id} style={{ marginBottom: '0.5rem' }}>
-              {reward.title} - {reward.cost} монет
-              <button onClick={() => spendCurrency(reward)} style={{ marginLeft: '1rem' }}>
-                Потратить
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <p>Ваши монеты: {stats.totalCoins}</p>
+      <ul>
+        {rewards.map((reward) => (
+          <li key={reward.id}>
+            {reward.name} ({reward.cost} монет)
+            <button
+              onClick={() => purchaseReward(reward.id)}
+              disabled={stats.totalCoins < reward.cost}
+            >
+              Купить
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
-}
+};
 
 export default Rewards;
