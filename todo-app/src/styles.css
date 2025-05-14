@@ -79,6 +79,14 @@ body {
   font-size: 14px;
 }
 
+.completed-task {
+  background-color: #E0E7FF;
+}
+
+.failed-task {
+  background-color: #E0E7FF;
+}
+
 .button {
   border: none;
   border-radius: 5px;

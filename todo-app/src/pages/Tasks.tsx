@@ -4,7 +4,7 @@ import '../styles.css';
 interface Task {
   id: string;
   title: string;
-  deadline?: string; // Сделали дедлайн опциональным
+  deadline?: string;
   description: string;
   status: "pending" | "completed" | "failed";
   coins: number;
@@ -68,38 +68,30 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
       setTasks(JSON.parse(storedTasks));
     }
     const storedStats = localStorage.getItem("stats");
-    if (!storedStats) {
-      localStorage.setItem("stats", JSON.stringify(initialStats));
-    } else {
+    if (storedStats) {
       const parsedStats = JSON.parse(storedStats);
-      let migratedStats: Stats;
-      if (typeof parsedStats.completed === "number") {
-        migratedStats = {
-          completed: { easy: parsedStats.completed || 0, medium: 0, hard: 0 },
-          failed: { easy: parsedStats.failed || 0, medium: 0, hard: 0 },
-          totalCoins: parsedStats.totalCoins || 0,
-          xp: 0,
-          level: 1,
-        };
-      } else {
-        const correctedLevel = calculateLevel(parsedStats.xp || 0);
-        migratedStats = {
-          ...parsedStats,
-          xp: parsedStats.xp || 0,
-          level: correctedLevel,
-        };
-      }
+      const migratedStats = {
+        ...initialStats,
+        ...parsedStats,
+        completed: parsedStats.completed || initialStats.completed,
+        failed: parsedStats.failed || initialStats.failed,
+        totalCoins: parsedStats.totalCoins || initialStats.totalCoins,
+        xp: parsedStats.xp || initialStats.xp,
+        level: calculateLevel(parsedStats.xp || 0),
+      };
       localStorage.setItem("stats", JSON.stringify(migratedStats));
+    } else {
+      localStorage.setItem("stats", JSON.stringify(initialStats));
     }
   }, []);
 
   const addTask = () => {
-    if (newTask.title.trim() === "") return; // Только название обязательно
+    if (newTask.title.trim() === "") return;
 
     const newTaskItem: Task = {
       id: Date.now().toString(),
       title: newTask.title,
-      deadline: newTask.deadline || "", // Дедлайн опционален
+      deadline: newTask.deadline || "",
       description: newTask.description,
       status: "pending",
       coins: newTask.difficulty === "easy" ? 10 : newTask.difficulty === "medium" ? 20 : 30,
@@ -140,7 +132,7 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
     }
 
     localStorage.setItem("stats", JSON.stringify(stats));
-    updateCoins(); // Вызов функции обновления монет
+    updateCoins();
   };
 
   const markTaskAsFailed = (taskId: string) => {
@@ -206,15 +198,22 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
         </h2>
         {showCompleted && (
           <ul className="task-list">
-            {completedTasks.length === 0 ? (
-              <li className="empty-message">Нет завершённых задач</li>
-            ) : (
-              completedTasks.map((task) => (
-                <li key={task.id} className="task-item">
-                  {task.title} ({task.difficulty}) - {task.status}
-                </li>
-              ))
-            )}
+            {completedTasks.map((task) => (
+              <li
+                key={task.id}
+                onClick={() => { setSelectedTask(task); setShowDetailPopup(true); }}
+                className="task-card completed-task"
+              >
+                <div>
+                  <h3>{task.title} ({task.difficulty}) - {task.status}</h3>
+                  {task.deadline && (
+                    <div className="task-meta">
+                      <span>⏰ {task.deadline}</span>
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
           </ul>
         )}
         <h2
@@ -225,15 +224,22 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
         </h2>
         {showFailed && (
           <ul className="task-list">
-            {failedTasks.length === 0 ? (
-              <li className="empty-message">Нет проваленных задач</li>
-            ) : (
-              failedTasks.map((task) => (
-                <li key={task.id} className="task-item">
-                  {task.title} ({task.difficulty}) - {task.status}
-                </li>
-              ))
-            )}
+            {failedTasks.map((task) => (
+              <li
+                key={task.id}
+                onClick={() => { setSelectedTask(task); setShowDetailPopup(true); }}
+                className="task-card failed-task"
+              >
+                <div>
+                  <h3>{task.title} ({task.difficulty}) - {task.status}</h3>
+                  {task.deadline && (
+                    <div className="task-meta">
+                      <span>⏰ {task.deadline}</span>
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
           </ul>
         )}
       </main>
