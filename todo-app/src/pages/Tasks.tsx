@@ -17,6 +17,9 @@ interface Stats {
   totalCoins: number;
   xp: number;
   level: number;
+  totalEarnedCoins: number;
+  totalEarnedXp: number;
+  purchases: number;
 }
 
 const initialStats: Stats = {
@@ -25,6 +28,9 @@ const initialStats: Stats = {
   totalCoins: 0,
   xp: 0,
   level: 1,
+  totalEarnedCoins: 0,
+  totalEarnedXp: 0,
+  purchases: 0,
 };
 
 // Функция для вычисления XP, необходимого для достижения уровня
@@ -122,8 +128,11 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
     stats.completed[task.difficulty] = (stats.completed[task.difficulty] || 0) + 1;
     stats.totalCoins += task.coins;
     const oldLevel = stats.level;
-    stats.xp += task.difficulty === "easy" ? 10 : task.difficulty === "medium" ? 20 : 30;
+    const xpReward = task.difficulty === "easy" ? 10 : task.difficulty === "medium" ? 20 : 30;
+    stats.xp += xpReward;
     stats.level = calculateLevel(stats.xp);
+    stats.totalEarnedCoins = (stats.totalEarnedCoins || 0) + task.coins;
+    stats.totalEarnedXp = (stats.totalEarnedXp || 0) + xpReward;
 
     if (stats.level > oldLevel) {
       setNewLevel(stats.level);

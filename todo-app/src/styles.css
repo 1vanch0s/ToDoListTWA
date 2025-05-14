@@ -18,9 +18,9 @@ body {
 }
 
 .avatar {
-  width: 30px;
-  height: 30px;
-  background-color: #000;
+  width: 60px;
+  height: 60px;
+  background-color: #ccc;
   border-radius: 50%;
   margin-right: 10px;
 }
@@ -71,8 +71,8 @@ body {
 .rewards-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  row-gap: 20px; /* Увеличиваем вертикальное расстояние */
-  column-gap: 15px; /* Горизонтальное расстояние */
+  row-gap: 20px;
+  column-gap: 15px;
 }
 
 .reward-card {
@@ -83,7 +83,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 200px; /* Фиксируем минимальную высоту */
+  min-height: 200px;
 }
 
 .reward-card h3 {
@@ -281,6 +281,67 @@ body {
   margin-left: 10px;
 }
 
+.profile-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.level-circle {
+  margin-left: 20px;
+  position: relative;
+}
+
+.xp-text {
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
+}
+
+.stats-card {
+  background-color: #3B82F6;
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.stats-card h3 {
+  color: #fff;
+  margin: 0 0 10px 0;
+}
+
+.stats-section {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.stats-section div {
+  color: #fff;
+}
+
+.stats-section div p {
+  margin: 5px 0;
+}
+
+.reset-button {
+  background-color: #EF4444;
+  color: #fff;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.reset-button:hover {
+  background-color: #DC2626;
+}
+
+.future-section {
+  background-color: #93C5FD;
+  color: #000;
+}
+
 @media (max-width: 768px) {
   .main {
     padding: 10px;
@@ -302,5 +363,12 @@ body {
   }
   .task-card {
     padding: 10px;
+  }
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  .level-circle {
+    margin: 10px 0;
   }
 }

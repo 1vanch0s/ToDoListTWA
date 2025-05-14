@@ -6,7 +6,7 @@ interface Reward {
   title: string;
   description: string;
   cost: number;
-  purchased: boolean; // Оставляем, но не используем для ограничения покупки
+  purchased: boolean;
 }
 
 interface Stats {
@@ -15,6 +15,9 @@ interface Stats {
   totalCoins: number;
   xp: number;
   level: number;
+  totalEarnedCoins: number; // Добавляем общее количество заработанных монет
+  totalEarnedXp: number; // Добавляем общее количество заработанного опыта
+  purchases: number; // Счётчик покупок
 }
 
 interface RewardsProps {
@@ -69,11 +72,13 @@ const Rewards: React.FC<RewardsProps> = ({ updateCoins }) => {
       return;
     }
 
-    // Вычитаем стоимость награды из монет
+    // Вычитаем стоимость из текущих монет
     stats.totalCoins -= reward.cost;
+    // Увеличиваем счётчик покупок
+    stats.purchases = (stats.purchases || 0) + 1;
+    // Обновляем общее количество заработанных монет (например, увеличиваем при выполнении задач)
     localStorage.setItem("stats", JSON.stringify(stats));
 
-    // Обновляем монеты в шапке
     updateCoins();
   };
 
