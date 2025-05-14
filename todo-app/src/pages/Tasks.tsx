@@ -12,18 +12,44 @@ interface Stats {
   completed: { easy: number; medium: number; hard: number };
   failed: { easy: number; medium: number; hard: number };
   totalCoins: number;
+  xp: number;
+  level: number;
 }
 
 const initialStats: Stats = {
   completed: { easy: 0, medium: 0, hard: 0 },
   failed: { easy: 0, medium: 0, hard: 0 },
   totalCoins: 0,
+  xp: 0,
+  level: 1,
+};
+
+// Функция для вычисления XP, необходимого для достижения уровня
+const xpForLevel = (level: number): number => {
+  if (level <= 1) return 0;
+  let totalXp = 0;
+  for (let i = 2; i <= level; i++) {
+    const tier = Math.floor((i - 1) / 10); // Каждые 10 уровней увеличиваем требование
+    totalXp += 100 + tier * 50;
+  }
+  return totalXp;
+};
+
+// Функция для вычисления уровня на основе XP
+const calculateLevel = (xp: number): number => {
+  let level = 1;
+  while (xpForLevel(level + 1) <= xp) {
+    level++;
+  }
+  return level;
 };
 
 const Tasks: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDifficulty, setNewTaskDifficulty] = useState<"easy" | "medium" | "hard">("easy");
+  const [showLevelUpPopup, setShowLevelUpPopup] = useState(false);
+  const [newLevel, setNewLevel] = useState<number | null>(null);
 
   useEffect(() => {
     const storedTasks = localStorage.getItem("tasks");
@@ -35,16 +61,27 @@ const Tasks: React.FC = () => {
     if (!storedStats) {
       localStorage.setItem("stats", JSON.stringify(initialStats));
     } else {
-      // Миграция старых данных
+      // Миграция и проверка данных
       const parsedStats = JSON.parse(storedStats);
+      let migratedStats: Stats;
       if (typeof parsedStats.completed === "number") {
-        const migratedStats: Stats = {
+        migratedStats = {
           completed: { easy: parsedStats.completed || 0, medium: 0, hard: 0 },
           failed: { easy: parsedStats.failed || 0, medium: 0, hard: 0 },
           totalCoins: parsedStats.totalCoins || 0,
+          xp: 0,
+          level: 1,
         };
-        localStorage.setItem("stats", JSON.stringify(migratedStats));
+      } else {
+        // Проверяем и исправляем уровень на основе XP
+        const correctedLevel = calculateLevel(parsedStats.xp || 0);
+        migratedStats = {
+          ...parsedStats,
+          xp: parsedStats.xp || 0,
+          level: correctedLevel,
+        };
       }
+      localStorage.setItem("stats", JSON.stringify(migratedStats));
     }
   }, []);
 
@@ -82,6 +119,19 @@ const Tasks: React.FC = () => {
     const stats = JSON.parse(localStorage.getItem("stats") || JSON.stringify(initialStats));
     stats.completed[task.difficulty] = (stats.completed[task.difficulty] || 0) + 1;
     stats.totalCoins += task.coins;
+
+    // Начисляем XP и проверяем уровень
+    const xpGained = task.difficulty === "easy" ? 10 : task.difficulty === "medium" ? 20 : 30;
+    const oldLevel = stats.level;
+    stats.xp += xpGained;
+    stats.level = calculateLevel(stats.xp);
+
+    if (stats.level > oldLevel) {
+      setNewLevel(stats.level);
+      setShowLevelUpPopup(true);
+      setTimeout(() => setShowLevelUpPopup(false), 3000); // Закрываем попап через 3 секунды
+    }
+
     localStorage.setItem("stats", JSON.stringify(stats));
   };
 
@@ -134,6 +184,27 @@ const Tasks: React.FC = () => {
           </li>
         ))}
       </ul>
+
+      {/* Попап для нового уровня */}
+      {showLevelUpPopup && newLevel && (
+        <div
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            backgroundColor: "#fff",
+            padding: "20px",
+            border: "2px solid #4caf50",
+            borderRadius: "10px",
+            boxShadow: "0 0 10px rgba(0,0,0,0.3)",
+            zIndex: 1000,
+          }}
+        >
+          <h2>Поздравляем!</h2>
+          <p>Вы достигли уровня {newLevel}!</p>
+        </div>
+      )}
     </div>
   );
 };
