@@ -68,6 +68,85 @@ body {
   min-height: calc(100vh - 100px);
 }
 
+.rewards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  row-gap: 20px; /* Увеличиваем вертикальное расстояние */
+  column-gap: 15px; /* Горизонтальное расстояние */
+}
+
+.reward-card {
+  background-color: #3B82F6;
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 200px; /* Фиксируем минимальную высоту */
+}
+
+.reward-card h3 {
+  color: #000;
+  margin: 0 0 5px 0;
+}
+
+.reward-card p {
+  color: #000;
+  font-size: 14px;
+  margin: 5px 0;
+}
+
+.reward-cost {
+  color: #000;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+.reward-actions {
+  text-align: center;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.purchase-button {
+  background-color: #FFD700;
+  color: #000;
+  border-radius: 5px;
+  padding: 5px 10px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+}
+
+.purchase-button:hover {
+  background-color: #FFC107;
+}
+
+.purchased-text {
+  color: #FFD700;
+  font-weight: bold;
+  text-align: center;
+  display: block;
+}
+
+.delete-button {
+  background-color: #EF4444;
+  color: #fff;
+  border-radius: 5px;
+  padding: 5px 10px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.delete-button:hover {
+  background-color: #DC2626;
+}
+
 .task-card {
   background-color: #3B82F6;
   border-radius: 15px;
@@ -214,6 +293,9 @@ body {
   }
   .popup {
     width: 90%;
+  }
+  .rewards-grid {
+    grid-template-columns: 1fr;
   }
   .task-card h3 {
     font-size: 16px;

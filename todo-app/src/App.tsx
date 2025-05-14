@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes, NavLink } from "react-router-dom";
 import Tasks from "./pages/Tasks";
 import Profile from "./pages/Profile";
-import './styles.css';
 import Rewards from "./pages/Rewards";
+import './styles.css';
 
 interface Stats {
   completed: { easy: number; medium: number; hard: number };
@@ -65,7 +65,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<Tasks updateCoins={updateCoins} />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/rewards" element={<Rewards />} />
+          <Route path="/rewards" element={<Rewards updateCoins={updateCoins} />} />
         </Routes>
       </div>
     </Router>
