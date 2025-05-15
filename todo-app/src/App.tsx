@@ -13,13 +13,13 @@ interface Stats {
   level: number;
 }
 
-const initialStats: Stats = {
-  completed: { easy: 0, medium: 0, hard: 0 },
-  failed: { easy: 0, medium: 0, hard: 0 },
-  totalCoins: 0,
-  xp: 0,
-  level: 1,
-};
+// const initialStats: Stats = {
+//   completed: { easy: 0, medium: 0, hard: 0 },
+//   failed: { easy: 0, medium: 0, hard: 0 },
+//   totalCoins: 0,
+//   xp: 0,
+//   level: 1,
+// };
 
 const App: React.FC = () => {
   const userName = "Имя пользователя";
