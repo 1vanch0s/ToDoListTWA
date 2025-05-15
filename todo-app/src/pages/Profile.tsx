@@ -42,13 +42,22 @@ const Profile: React.FC = () => {
   const userName = "Имя пользователя";
 
   useEffect(() => {
-    const storedStats = localStorage.getItem("stats");
-    if (storedStats) {
-      const parsedStats: Stats = JSON.parse(storedStats);
-      const calculatedLevel = parsedStats.xp >= nextLevelXp(parsedStats.level)
-        ? parsedStats.level + 1
-        : parsedStats.level;
-      setStats({ ...parsedStats, level: calculatedLevel });
+    try {
+      const storedStats = localStorage.getItem("stats");
+      if (storedStats) {
+        const parsedStats: Stats = JSON.parse(storedStats);
+        const calculatedLevel = parsedStats.xp >= nextLevelXp(parsedStats.level)
+          ? parsedStats.level + 1
+          : parsedStats.level;
+        setStats({ ...parsedStats, level: calculatedLevel });
+      } else {
+        setStats(initialStats);
+        localStorage.setItem("stats", JSON.stringify(initialStats));
+      }
+    } catch (error) {
+      console.error("Error loading stats from localStorage:", error);
+      setStats(initialStats);
+      localStorage.setItem("stats", JSON.stringify(initialStats));
     }
   }, []);
 
@@ -57,9 +66,11 @@ const Profile: React.FC = () => {
     : 0;
 
   const resetStats = () => {
+    console.log("Resetting stats...");
     localStorage.setItem("stats", JSON.stringify(initialStats));
     localStorage.setItem("rewards", JSON.stringify([]));
-    localStorage.setItem("tasks", JSON.stringify([])); // Добавляем сброс задач
+    // Удаляем строку, которая сбрасывает задачи
+    // localStorage.setItem("tasks", JSON.stringify([]));
     setStats(initialStats);
   };
 
