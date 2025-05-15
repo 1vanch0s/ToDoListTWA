@@ -114,7 +114,7 @@ const Profile: React.FC = () => {
                 </text>
               </svg>
               <div className="xp-text">
-                {stats.xp} XP / {nextLevelXp(stats.level)} XP
+                {stats.xp - xpForLevel(stats.level)} XP / {nextLevelXp(stats.level) - xpForLevel(stats.level)} XP
               </div>
             </div>
           </div>
