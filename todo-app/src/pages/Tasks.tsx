@@ -74,27 +74,39 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Загрузка данных пользователя из Telegram
-  const tg = (window as any).Telegram.WebApp;
+  const tg = (window as any).Telegram?.WebApp;
   React.useEffect(() => {
+    if (!tg) {
+      console.error("Telegram WebApp is not available");
+      return;
+    }
     tg.ready();
     const user = tg.initDataUnsafe.user;
+    console.log("Telegram user data:", tg.initDataUnsafe); // Отладка
     if (user) {
       setUserName(user.first_name + (user.last_name ? " " + user.last_name : ""));
       if (user.photo_url) {
         setAvatarUrl(user.photo_url);
+      } else {
+        console.log("No photo_url available for user");
       }
+    } else {
+      console.log("No user data from Telegram");
     }
   }, []);
 
   // Функция отправки уведомлений через Telegram Bot API
   const sendNotification = async (message: string) => {
-    const chatId = tg.initDataUnsafe.user?.id;
-    if (!chatId) return;
+    const chatId = tg?.initDataUnsafe.user?.id;
+    if (!chatId) {
+      console.log("No chatId available");
+      return;
+    }
 
     const botToken = "8003428355:AAGMBB6b0czKamBlgS9tNzfrQdeDFGeoipM"; 
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
     try {
-      await fetch(url, {
+      const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -102,6 +114,12 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
           text: message,
         }),
       });
+      const result = await response.json();
+      if (!result.ok) {
+        console.log("Failed to send notification:", result);
+      } else {
+        console.log("Notification sent successfully");
+      }
     } catch (error) {
       console.error("Error sending notification:", error);
     }

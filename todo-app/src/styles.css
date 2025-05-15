@@ -2,6 +2,9 @@ body {
   margin: 0;
   font-family: Arial, sans-serif;
 }
+body, html, #root {
+  background-color: #ffffff !important;
+}
 
 .header {
   background-color: #1E3A8A;
