@@ -64,32 +64,86 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
   const [newLevel, setNewLevel] = useState<number | null>(null);
   const [showCompleted, setShowCompleted] = useState(false);
   const [showFailed, setShowFailed] = useState(false);
+  const [showPending, setShowPending] = useState(false);
   const [showAddPopup, setShowAddPopup] = useState(false);
   const [showDetailPopup, setShowDetailPopup] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showDeadlinePopup, setShowDeadlinePopup] = useState(false);
+  const [expiredTask, setExpiredTask] = useState<Task | null>(null);
 
+  // Загрузка задач при монтировании компонента
   useEffect(() => {
-    const storedTasks = localStorage.getItem("tasks");
-    if (storedTasks) {
-      setTasks(JSON.parse(storedTasks));
-    }
-    const storedStats = localStorage.getItem("stats");
-    if (storedStats) {
-      const parsedStats = JSON.parse(storedStats);
-      const migratedStats = {
-        ...initialStats,
-        ...parsedStats,
-        completed: parsedStats.completed || initialStats.completed,
-        failed: parsedStats.failed || initialStats.failed,
-        totalCoins: parsedStats.totalCoins || initialStats.totalCoins,
-        xp: parsedStats.xp || initialStats.xp,
-        level: calculateLevel(parsedStats.xp || 0),
-      };
-      localStorage.setItem("stats", JSON.stringify(migratedStats));
-    } else {
-      localStorage.setItem("stats", JSON.stringify(initialStats));
+    try {
+      const storedTasks = localStorage.getItem("tasks");
+      console.log("Raw stored tasks from localStorage:", storedTasks);
+      if (storedTasks) {
+        const parsedTasks = JSON.parse(storedTasks);
+        if (Array.isArray(parsedTasks)) {
+          setTasks(parsedTasks);
+          console.log("Loaded tasks from localStorage:", parsedTasks);
+        } else {
+          console.warn("Stored tasks are not an array, resetting to empty array");
+          setTasks([]);
+          localStorage.setItem("tasks", JSON.stringify([]));
+        }
+      } else {
+        console.log("No tasks in localStorage, initializing empty array");
+        localStorage.setItem("tasks", JSON.stringify([]));
+        setTasks([]);
+      }
+
+      const storedStats = localStorage.getItem("stats");
+      if (storedStats) {
+        const parsedStats = JSON.parse(storedStats);
+        const migratedStats = {
+          ...initialStats,
+          ...parsedStats,
+          completed: parsedStats.completed || initialStats.completed,
+          failed: parsedStats.failed || initialStats.failed,
+          totalCoins: parsedStats.totalCoins || initialStats.totalCoins,
+          xp: parsedStats.xp || initialStats.xp,
+          level: calculateLevel(parsedStats.xp || 0),
+          totalEarnedCoins: parsedStats.totalEarnedCoins || 0,
+          totalEarnedXp: parsedStats.totalEarnedXp || 0,
+          purchases: parsedStats.purchases || 0,
+        };
+        localStorage.setItem("stats", JSON.stringify(migratedStats));
+      } else {
+        localStorage.setItem("stats", JSON.stringify(initialStats));
+      }
+
+      checkDeadlines();
+    } catch (error) {
+      console.error("Error loading from localStorage:", error);
+      setTasks([]);
+      localStorage.setItem("tasks", JSON.stringify([]));
     }
   }, []);
+
+  // Проверка дедлайнов каждые 10 секунд
+  useEffect(() => {
+    const interval = setInterval(checkDeadlines, 10000);
+    return () => clearInterval(interval);
+  }, [tasks]);
+
+  const checkDeadlines = () => {
+    const now = new Date();
+    let taskToAsk: Task | null = null;
+
+    tasks.forEach((task) => {
+      if (task.status !== "pending" || !task.deadline) return;
+
+      const deadlineDate = new Date(task.deadline);
+      if (now > deadlineDate && !taskToAsk) {
+        taskToAsk = task;
+      }
+    });
+
+    if (taskToAsk && !showDeadlinePopup) {
+      setExpiredTask(taskToAsk);
+      setShowDeadlinePopup(true);
+    }
+  };
 
   const addTask = () => {
     if (newTask.title.trim() === "") return;
@@ -106,7 +160,12 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
 
     setTasks((prevTasks) => {
       const updatedTasks = [...prevTasks, newTaskItem];
-      localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+      try {
+        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+        console.log("Saved tasks after adding:", updatedTasks);
+      } catch (error) {
+        console.error("Error saving tasks after adding:", error);
+      }
       return updatedTasks;
     });
 
@@ -118,11 +177,18 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    const updatedTasks = tasks.map((t) =>
-      t.id === taskId ? { ...t, status: "completed" as Task["status"] } : t
-    );
-    setTasks(updatedTasks);
-    localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+    setTasks((prevTasks) => {
+      const updatedTasks = prevTasks.map((t) =>
+        t.id === taskId ? { ...t, status: "completed" as Task["status"] } : t
+      );
+      try {
+        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+        console.log("Saved tasks after marking as completed:", updatedTasks);
+      } catch (error) {
+        console.error("Error saving tasks after marking as completed:", error);
+      }
+      return updatedTasks;
+    });
 
     const stats = JSON.parse(localStorage.getItem("stats") || JSON.stringify(initialStats));
     stats.completed[task.difficulty] = (stats.completed[task.difficulty] || 0) + 1;
@@ -148,15 +214,36 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    const updatedTasks = tasks.map((t) =>
-      t.id === taskId ? { ...t, status: "failed" as Task["status"] } : t
-    );
-    setTasks(updatedTasks);
-    localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+    setTasks((prevTasks) => {
+      const updatedTasks = prevTasks.map((t) =>
+        t.id === taskId ? { ...t, status: "failed" as Task["status"] } : t
+      );
+      try {
+        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+        console.log("Saved tasks after marking as failed:", updatedTasks);
+      } catch (error) {
+        console.error("Error saving tasks after marking as failed:", error);
+      }
+      return updatedTasks;
+    });
 
     const stats = JSON.parse(localStorage.getItem("stats") || JSON.stringify(initialStats));
     stats.failed[task.difficulty] = (stats.failed[task.difficulty] || 0) + 1;
     localStorage.setItem("stats", JSON.stringify(stats));
+  };
+
+  const handleDeadlineConfirmation = (completed: boolean) => {
+    if (!expiredTask) return;
+
+    if (completed) {
+      markTaskAsCompleted(expiredTask.id);
+    } else {
+      markTaskAsFailed(expiredTask.id);
+    }
+
+    setShowDeadlinePopup(false);
+    setExpiredTask(null);
+    checkDeadlines();
   };
 
   const pendingTasks = tasks.filter((task) => task.status === "pending");
@@ -166,39 +253,53 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
   return (
     <div>
       <main className="main">
-        {pendingTasks.map((task) => (
-          <div
-            key={task.id}
-            onClick={() => { setSelectedTask(task); setShowDetailPopup(true); }}
-            className="task-card"
-          >
-            <div>
-              <h3>{task.title}</h3>
-              {task.deadline && (
-                <div className="task-meta">
-                  <span>⏰ {task.deadline}</span>
-                </div>
-              )}
-              <div className="task-meta">
-                Сложность: {task.difficulty.charAt(0).toUpperCase() + task.difficulty.slice(1)}
-              </div>
-            </div>
-            <div>
-              <button
-                onClick={(e) => { e.stopPropagation(); markTaskAsFailed(task.id); }}
-                className="button fail-button"
-              >
-                Провалено
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); markTaskAsCompleted(task.id); }}
-                className="button success-button"
-              >
-                Сделано
-              </button>
-            </div>
-          </div>
-        ))}
+        <h2
+          onClick={() => setShowPending(!showPending)}
+          className="collapsible-header"
+        >
+          Текущие задачи {showPending ? "▲" : "▼"}
+        </h2>
+        {showPending && (
+          <ul className="task-list">
+            {pendingTasks.length > 0 ? (
+              pendingTasks.map((task) => (
+                <li
+                  key={task.id}
+                  onClick={() => { setSelectedTask(task); setShowDetailPopup(true); }}
+                  className="task-card"
+                >
+                  <div>
+                    <h3>{task.title}</h3>
+                    {task.deadline && (
+                      <div className="task-meta">
+                        <span>⏰ {task.deadline}</span>
+                      </div>
+                    )}
+                    <div className="task-meta">
+                      Сложность: {task.difficulty.charAt(0).toUpperCase() + task.difficulty.slice(1)}
+                    </div>
+                  </div>
+                  <div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); markTaskAsFailed(task.id); }}
+                      className="button fail-button"
+                    >
+                      Провалено
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); markTaskAsCompleted(task.id); }}
+                      className="button success-button"
+                    >
+                      Сделано
+                    </button>
+                  </div>
+                </li>
+              ))
+            ) : (
+              <li className="empty-message">Нет задач</li>
+            )}
+          </ul>
+        )}
         <h2
           onClick={() => setShowCompleted(!showCompleted)}
           className="collapsible-header"
@@ -207,22 +308,26 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
         </h2>
         {showCompleted && (
           <ul className="task-list">
-            {completedTasks.map((task) => (
-              <li
-                key={task.id}
-                onClick={() => { setSelectedTask(task); setShowDetailPopup(true); }}
-                className="task-card completed-task"
-              >
-                <div>
-                  <h3>{task.title} ({task.difficulty}) - {task.status}</h3>
-                  {task.deadline && (
-                    <div className="task-meta">
-                      <span>⏰ {task.deadline}</span>
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
+            {completedTasks.length > 0 ? (
+              completedTasks.map((task) => (
+                <li
+                  key={task.id}
+                  onClick={() => { setSelectedTask(task); setShowDetailPopup(true); }}
+                  className="task-card completed-task"
+                >
+                  <div>
+                    <h3>{task.title} ({task.difficulty}) - {task.status}</h3>
+                    {task.deadline && (
+                      <div className="task-meta">
+                        <span>⏰ {task.deadline}</span>
+                      </div>
+                    )}
+                  </div>
+                </li>
+              ))
+            ) : (
+              <li className="empty-message">Нет задач</li>
+            )}
           </ul>
         )}
         <h2
@@ -233,22 +338,26 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
         </h2>
         {showFailed && (
           <ul className="task-list">
-            {failedTasks.map((task) => (
-              <li
-                key={task.id}
-                onClick={() => { setSelectedTask(task); setShowDetailPopup(true); }}
-                className="task-card failed-task"
-              >
-                <div>
-                  <h3>{task.title} ({task.difficulty}) - {task.status}</h3>
-                  {task.deadline && (
-                    <div className="task-meta">
-                      <span>⏰ {task.deadline}</span>
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
+            {failedTasks.length > 0 ? (
+              failedTasks.map((task) => (
+                <li
+                  key={task.id}
+                  onClick={() => { setSelectedTask(task); setShowDetailPopup(true); }}
+                  className="task-card failed-task"
+                >
+                  <div>
+                    <h3>{task.title} ({task.difficulty}) - {task.status}</h3>
+                    {task.deadline && (
+                      <div className="task-meta">
+                        <span>⏰ {task.deadline}</span>
+                      </div>
+                    )}
+                  </div>
+                </li>
+              ))
+            ) : (
+              <li className="empty-message">Нет задач</li>
+            )}
           </ul>
         )}
       </main>
@@ -319,6 +428,20 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
         <div className="popup">
           <h2>Поздравляем!</h2>
           <p>Вы достигли уровня {newLevel}!</p>
+        </div>
+      )}
+
+      {/* Попап для подтверждения дедлайна */}
+      {showDeadlinePopup && expiredTask && (
+        <div className="popup">
+          <h2>Дедлайн истёк</h2>
+          <p>Время выполнения задачи "{expiredTask.title}" вышло. Успели ли вы выполнить её?</p>
+          <button onClick={() => handleDeadlineConfirmation(true)} className="button success-button">
+            Да
+          </button>
+          <button onClick={() => handleDeadlineConfirmation(false)} className="button fail-button">
+            Нет
+          </button>
         </div>
       )}
     </div>
