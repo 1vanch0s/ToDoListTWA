@@ -75,6 +75,7 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
   useEffect(() => {
     try {
       const storedTasks = localStorage.getItem("tasks");
+      console.log("Raw stored tasks from localStorage:", storedTasks);
       if (storedTasks) {
         const parsedTasks = JSON.parse(storedTasks);
         if (Array.isArray(parsedTasks)) {
@@ -99,7 +100,7 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
           ...parsedStats,
           completed: parsedStats.completed || initialStats.completed,
           failed: parsedStats.failed || initialStats.failed,
-           totalCoins: parsedStats.totalCoins || initialStats.totalCoins,
+          totalCoins: parsedStats.totalCoins || initialStats.totalCoins,
           xp: parsedStats.xp || initialStats.xp,
           level: calculateLevel(parsedStats.xp || 0),
           totalEarnedCoins: parsedStats.totalEarnedCoins || 0,
@@ -118,16 +119,6 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
       localStorage.setItem("tasks", JSON.stringify([]));
     }
   }, []);
-
-  // Сохранение задач при каждом изменении
-  useEffect(() => {
-    try {
-      console.log("Saving tasks to localStorage:", tasks);
-      localStorage.setItem("tasks", JSON.stringify(tasks));
-    } catch (error) {
-      console.error("Error saving to localStorage:", error);
-    }
-  }, [tasks]);
 
   // Проверка дедлайнов каждые 10 секунд
   useEffect(() => {
@@ -167,7 +158,17 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
       difficulty: newTask.difficulty,
     };
 
-    setTasks((prevTasks) => [...prevTasks, newTaskItem]);
+    setTasks((prevTasks) => {
+      const updatedTasks = [...prevTasks, newTaskItem];
+      try {
+        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+        console.log("Saved tasks after adding:", updatedTasks);
+      } catch (error) {
+        console.error("Error saving tasks after adding:", error);
+      }
+      return updatedTasks;
+    });
+
     setNewTask({ title: "", deadline: "", description: "", difficulty: "easy" });
     setShowAddPopup(false);
   };
@@ -176,11 +177,18 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    setTasks((prevTasks) =>
-      prevTasks.map((t) =>
+    setTasks((prevTasks) => {
+      const updatedTasks = prevTasks.map((t) =>
         t.id === taskId ? { ...t, status: "completed" as Task["status"] } : t
-      )
-    );
+      );
+      try {
+        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+        console.log("Saved tasks after marking as completed:", updatedTasks);
+      } catch (error) {
+        console.error("Error saving tasks after marking as completed:", error);
+      }
+      return updatedTasks;
+    });
 
     const stats = JSON.parse(localStorage.getItem("stats") || JSON.stringify(initialStats));
     stats.completed[task.difficulty] = (stats.completed[task.difficulty] || 0) + 1;
@@ -206,11 +214,18 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    setTasks((prevTasks) =>
-      prevTasks.map((t) =>
+    setTasks((prevTasks) => {
+      const updatedTasks = prevTasks.map((t) =>
         t.id === taskId ? { ...t, status: "failed" as Task["status"] } : t
-      )
-    );
+      );
+      try {
+        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+        console.log("Saved tasks after marking as failed:", updatedTasks);
+      } catch (error) {
+        console.error("Error saving tasks after marking as failed:", error);
+      }
+      return updatedTasks;
+    });
 
     const stats = JSON.parse(localStorage.getItem("stats") || JSON.stringify(initialStats));
     stats.failed[task.difficulty] = (stats.failed[task.difficulty] || 0) + 1;
