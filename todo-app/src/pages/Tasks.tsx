@@ -91,7 +91,7 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
     const chatId = tg.initDataUnsafe.user?.id;
     if (!chatId) return;
 
-    const botToken = "YOUR_BOT_TOKEN"; // Замени на токен своего бота
+    const botToken = "8003428355:AAGMBB6b0czKamBlgS9tNzfrQdeDFGeoipM"; 
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
     try {
       await fetch(url, {
