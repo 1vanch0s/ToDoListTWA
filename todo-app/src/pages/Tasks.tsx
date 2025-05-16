@@ -70,8 +70,7 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showDeadlinePopup, setShowDeadlinePopup] = useState(false);
   const [expiredTask, setExpiredTask] = useState<Task | null>(null);
-  const [userName, setUserName] = useState("Имя пользователя");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [chatId, setChatId] = useState<number | null>(null);
 
   // Загрузка данных пользователя из Telegram
   const tg = (window as any).Telegram?.WebApp;
@@ -83,13 +82,8 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
     tg.ready();
     const user = tg.initDataUnsafe.user;
     console.log("Telegram user data:", tg.initDataUnsafe); // Отладка
-    if (user) {
-      setUserName(user.first_name + (user.last_name ? " " + user.last_name : ""));
-      if (user.photo_url) {
-        setAvatarUrl(user.photo_url);
-      } else {
-        console.log("No photo_url available for user");
-      }
+    if (user && user.id) {
+      setChatId(user.id);
     } else {
       console.log("No user data from Telegram");
     }
@@ -97,7 +91,6 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
 
   // Функция отправки уведомлений через Telegram Bot API
   const sendNotification = async (message: string) => {
-    const chatId = tg?.initDataUnsafe.user?.id;
     if (!chatId) {
       console.log("No chatId available");
       return;
