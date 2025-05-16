@@ -13,17 +13,10 @@ interface Stats {
   level: number;
 }
 
-// const initialStats: Stats = {
-//   completed: { easy: 0, medium: 0, hard: 0 },
-//   failed: { easy: 0, medium: 0, hard: 0 },
-//   totalCoins: 0,
-//   xp: 0,
-//   level: 1,
-// };
-
 const App: React.FC = () => {
-  const userName = "Имя пользователя";
   const [coins, setCoins] = useState<number>(0);
+  const [userName, setUserName] = useState("Имя пользователя");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const updateCoins = () => {
     const storedStats = localStorage.getItem("stats");
@@ -39,12 +32,38 @@ const App: React.FC = () => {
     return () => window.removeEventListener("storage", updateCoins);
   }, []);
 
+  // Загрузка данных пользователя из Telegram
+  const tg = (window as any).Telegram?.WebApp;
+  React.useEffect(() => {
+    if (!tg) {
+      console.error("Telegram WebApp is not available");
+      return;
+    }
+    tg.ready();
+    const user = tg.initDataUnsafe.user;
+    console.log("Telegram user data:", tg.initDataUnsafe); // Отладка
+    if (user) {
+      setUserName(user.first_name + (user.last_name ? " " + user.last_name : ""));
+      if (user.photo_url) {
+        setAvatarUrl(user.photo_url);
+      } else {
+        console.log("No photo_url available for user");
+      }
+    } else {
+      console.log("No user data from Telegram");
+    }
+  }, []);
+
   return (
     <Router>
       <div>
         <header className="header">
           <div className="user-info">
-            <div className="avatar"></div>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Аватар" className="avatar-image" />
+            ) : (
+              <div className="avatar"></div>
+            )}
             <span>{userName}</span>
           </div>
           <div className="coins">

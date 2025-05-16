@@ -292,14 +292,6 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
   return (
     <div style={{ backgroundColor: "#ffffff" }}>
       <main className="main">
-        <div className="profile-header flex items-center space-x-4 mb-4">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="Аватар" className="w-12 h-12 rounded-full" />
-          ) : (
-            <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
-          )}
-          <h2 className="text-xl font-bold">{userName}</h2>
-        </div>
         <h2
           onClick={() => setShowPending(!showPending)}
           className="collapsible-header"

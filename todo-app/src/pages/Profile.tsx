@@ -91,36 +91,36 @@ const Profile: React.FC = () => {
       <main className="main">
         <div className="profile-header">
           {avatarUrl ? (
-            <img src={avatarUrl} alt="Аватар" className="w-16 h-16 rounded-full" />
+            <img src={avatarUrl} alt="Аватар" className="w-12 h-12 rounded-full" />
           ) : (
             <div className="avatar"></div>
           )}
           <div>
             <h2>{userName}</h2>
             <div className="level-circle">
-              <svg width="80" height="80">
+              <svg width="100" height="100">
                 <circle
-                  cx="40"
-                  cy="40"
-                  r="35"
+                  cx="50"
+                  cy="50"
+                  r="45"
                   stroke="#E0E7FF"
                   strokeWidth="5"
                   fill="none"
                 />
                 <circle
-                  cx="40"
-                  cy="40"
-                  r="35"
+                  cx="50"
+                  cy="50"
+                  r="45"
                   stroke="#3B82F6"
                   strokeWidth="5"
                   fill="none"
-                  strokeDasharray="219.8"
-                  strokeDashoffset={219.8 - (219.8 * progress / 100)}
-                  transform="rotate(-90 40 40)"
+                  strokeDasharray="282.6"
+                  strokeDashoffset={282.6 - (282.6 * progress / 100)}
+                  transform="rotate(-90 50 50)"
                 />
                 <text
-                  x="40"
-                  y="42"
+                  x="50"
+                  y="52"
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fontSize="16"
