@@ -96,7 +96,7 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
       return;
     }
 
-    const botToken = "8003428355:AAGMBB6b0czKamBlgS9tNzfrQdeDFGeoipM"; 
+    const botToken = import.meta.env.VITE_BOT_TOKEN; 
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
     try {
       const response = await fetch(url, {

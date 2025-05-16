@@ -1,8 +1,11 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
+import { defineConfig, loadEnv } from 'vite';
 
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  base: '/ToDoListTWA/',
-})
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  return {
+    base: '/ToDoListTWA/',
+    define: {
+      'import.meta.env.VITE_BOT_TOKEN': JSON.stringify(env.VITE_BOT_TOKEN),
+    },
+  };
+});
