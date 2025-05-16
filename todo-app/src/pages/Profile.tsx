@@ -91,7 +91,7 @@ const Profile: React.FC = () => {
       <main className="main">
         <div className="profile-header">
           {avatarUrl ? (
-            <img src={avatarUrl} alt="Аватар" className="w-12 h-12 rounded-full" />
+            <img src={avatarUrl} alt="Аватар" className="profile-avatar" />
           ) : (
             <div className="avatar"></div>
           )}
