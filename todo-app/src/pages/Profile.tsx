@@ -39,7 +39,21 @@ const nextLevelXp = (level: number): number => xpForLevel(level + 1);
 
 const Profile: React.FC = () => {
   const [stats, setStats] = useState<Stats>(initialStats);
-  const userName = "Имя пользователя";
+  const [userName, setUserName] = useState("Имя пользователя");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Загрузка данных пользователя из Telegram
+  const tg = (window as any).Telegram.WebApp;
+  React.useEffect(() => {
+    tg.ready();
+    const user = tg.initDataUnsafe.user;
+    if (user) {
+      setUserName(user.first_name + (user.last_name ? " " + user.last_name : ""));
+      if (user.photo_url) {
+        setAvatarUrl(user.photo_url);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -69,42 +83,44 @@ const Profile: React.FC = () => {
     console.log("Resetting stats...");
     localStorage.setItem("stats", JSON.stringify(initialStats));
     localStorage.setItem("rewards", JSON.stringify([]));
-    // Удаляем строку, которая сбрасывает задачи
-    // localStorage.setItem("tasks", JSON.stringify([]));
     setStats(initialStats);
   };
 
   return (
-    <div>
+    <div style={{ backgroundColor: "#ffffff" }}>
       <main className="main">
         <div className="profile-header">
-          <div className="avatar"></div>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="Аватар" className="profile-avatar" />
+          ) : (
+            <div className="avatar"></div>
+          )}
           <div>
             <h2>{userName}</h2>
             <div className="level-circle">
-              <svg width="80" height="80">
+              <svg width="100" height="100">
                 <circle
-                  cx="40"
-                  cy="40"
-                  r="35"
+                  cx="50"
+                  cy="50"
+                  r="45"
                   stroke="#E0E7FF"
                   strokeWidth="5"
                   fill="none"
                 />
                 <circle
-                  cx="40"
-                  cy="40"
-                  r="35"
+                  cx="50"
+                  cy="50"
+                  r="45"
                   stroke="#3B82F6"
                   strokeWidth="5"
                   fill="none"
-                  strokeDasharray="219.8"
-                  strokeDashoffset={219.8 - (219.8 * progress / 100)}
-                  transform="rotate(-90 40 40)"
+                  strokeDasharray="282.6"
+                  strokeDashoffset={282.6 - (282.6 * progress / 100)}
+                  transform="rotate(-90 50 50)"
                 />
                 <text
-                  x="40"
-                  y="42"
+                  x="50"
+                  y="52"
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fontSize="16"

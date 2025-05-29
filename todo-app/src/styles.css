@@ -2,6 +2,9 @@ body {
   margin: 0;
   font-family: Arial, sans-serif;
 }
+body, html, #root {
+  background-color: #ffffff !important;
+}
 
 .header {
   background-color: #1E3A8A;
@@ -15,6 +18,7 @@ body {
 .user-info {
   display: flex;
   align-items: center;
+  gap: 10px; /* Отступ между аватаркой и именем */
 }
 
 .avatar {
@@ -235,13 +239,15 @@ body {
   transform: translateX(-50%);
   width: 60px;
   height: 60px;
-  background-color: #3B82F6;
-  color: #fff;
-  border: none;
+  background-color: #3b82f6;
+  color: white;
   border-radius: 50%;
-  font-size: 30px;
+  font-size: 28px;
+  border: none;
   cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .popup {
@@ -377,4 +383,26 @@ body {
   .level-circle {
     margin: 10px 0;
   }
+}
+
+.avatar-image {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background-color: #e0e7ff;
+}
+
+.profile-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e0e7ff; /* Лёгкая обводка для гармонии с кругом */
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import '../styles.css';
+import "../styles.css";
 
 interface Task {
   id: string;
@@ -70,24 +70,67 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showDeadlinePopup, setShowDeadlinePopup] = useState(false);
   const [expiredTask, setExpiredTask] = useState<Task | null>(null);
+  const [chatId, setChatId] = useState<number | null>(null);
 
-  // Загрузка задач при монтировании компонента
+  // Загрузка данных пользователя из Telegram
+  const tg = (window as any).Telegram?.WebApp;
+  React.useEffect(() => {
+    if (!tg) {
+      console.error("Telegram WebApp is not available");
+      return;
+    }
+    tg.ready();
+    const user = tg.initDataUnsafe.user;
+    console.log("Telegram user data:", tg.initDataUnsafe); // Отладка
+    if (user && user.id) {
+      setChatId(user.id);
+    } else {
+      console.log("No user data from Telegram");
+    }
+  }, []);
+
+  // Функция отправки уведомлений через Telegram Bot API
+  const sendNotification = async (message: string) => {
+    if (!chatId) {
+      console.log("No chatId available");
+      return;
+    }
+
+    const botToken = import.meta.env.VITE_BOT_TOKEN; 
+    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+        }),
+      });
+      const result = await response.json();
+      if (!result.ok) {
+        console.log("Failed to send notification:", result);
+      } else {
+        console.log("Notification sent successfully");
+      }
+    } catch (error) {
+      console.error("Error sending notification:", error);
+    }
+  };
+
+  // Загрузка задач и статистики при монтировании
   useEffect(() => {
     try {
       const storedTasks = localStorage.getItem("tasks");
-      console.log("Raw stored tasks from localStorage:", storedTasks);
       if (storedTasks) {
         const parsedTasks = JSON.parse(storedTasks);
         if (Array.isArray(parsedTasks)) {
           setTasks(parsedTasks);
-          console.log("Loaded tasks from localStorage:", parsedTasks);
         } else {
-          console.warn("Stored tasks are not an array, resetting to empty array");
           setTasks([]);
           localStorage.setItem("tasks", JSON.stringify([]));
         }
       } else {
-        console.log("No tasks in localStorage, initializing empty array");
         localStorage.setItem("tasks", JSON.stringify([]));
         setTasks([]);
       }
@@ -136,6 +179,7 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
       const deadlineDate = new Date(task.deadline);
       if (now > deadlineDate && !taskToAsk) {
         taskToAsk = task;
+        sendNotification(`Дедлайн истёк: задача "${task.title}" просрочена!`);
       }
     });
 
@@ -160,12 +204,8 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
 
     setTasks((prevTasks) => {
       const updatedTasks = [...prevTasks, newTaskItem];
-      try {
-        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
-        console.log("Saved tasks after adding:", updatedTasks);
-      } catch (error) {
-        console.error("Error saving tasks after adding:", error);
-      }
+      localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+      sendNotification(`Новая задача добавлена: ${newTaskItem.title}${newTaskItem.deadline ? ` (Дедлайн: ${newTaskItem.deadline})` : ""}`);
       return updatedTasks;
     });
 
@@ -181,12 +221,8 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
       const updatedTasks = prevTasks.map((t) =>
         t.id === taskId ? { ...t, status: "completed" as Task["status"] } : t
       );
-      try {
-        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
-        console.log("Saved tasks after marking as completed:", updatedTasks);
-      } catch (error) {
-        console.error("Error saving tasks after marking as completed:", error);
-      }
+      localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+      sendNotification(`Задача "${task.title}" выполнена! 🎉`);
       return updatedTasks;
     });
 
@@ -218,12 +254,8 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
       const updatedTasks = prevTasks.map((t) =>
         t.id === taskId ? { ...t, status: "failed" as Task["status"] } : t
       );
-      try {
-        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
-        console.log("Saved tasks after marking as failed:", updatedTasks);
-      } catch (error) {
-        console.error("Error saving tasks after marking as failed:", error);
-      }
+      localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+      sendNotification(`Задача "${task.title}" провалена. 😞`);
       return updatedTasks;
     });
 
@@ -251,7 +283,7 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
   const failedTasks = tasks.filter((task) => task.status === "failed");
 
   return (
-    <div>
+    <div style={{ backgroundColor: "#ffffff" }}>
       <main className="main">
         <h2
           onClick={() => setShowPending(!showPending)}
