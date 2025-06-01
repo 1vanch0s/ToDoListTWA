@@ -21,10 +21,10 @@ app.use((req, res, next) => {
 });
 
 const pool = new Pool({
-  user: "todouser",
+  user: "postgres",
   host: "localhost",
   database: "todolist",
-  password: "yourpassword",
+  password: "3003",
   port: 5432,
 });
 
