@@ -43,6 +43,7 @@ const App: React.FC = () => {
       setAvatarUrl(user.photo_url || null);
       if (!localStorage.getItem("isRegistered")) {
         setShowRegisterPopup(true);
+        sendLogToServer("Попап регистрации отображен");
       }
     } else {
       sendLogToServer("No user data from Telegram");
@@ -50,13 +51,14 @@ const App: React.FC = () => {
   }, []);
 
   const registerUser = async () => {
+    sendLogToServer("Функция registerUser вызвана");
     if (!chatId || !userName) {
       sendLogToServer(`Ошибка: chatId или userName отсутствуют, chatId: ${chatId}, userName: ${userName}`);
       return;
     }
 
     sendLogToServer(`Попытка регистрации пользователя: userId=${chatId}, username=${userName}, avatarUrl=${avatarUrl}`);
-    sendLogToServer(`API URL: ${process.env.REACT_APP_API_URL}`); // Отладка
+    sendLogToServer(`API URL: ${process.env.REACT_APP_API_URL}`);
 
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/users`, {
@@ -68,7 +70,7 @@ const App: React.FC = () => {
           avatarUrl: avatarUrl,
         }),
       });
-      const responseData = await response.json(); // Читаем тело ответа
+      const responseData = await response.json();
       if (response.ok) {
         sendLogToServer(`Пользователь успешно зарегистрирован: ${JSON.stringify(responseData)}`);
         localStorage.setItem("isRegistered", "true");
@@ -79,6 +81,11 @@ const App: React.FC = () => {
     } catch (err) {
       sendLogToServer(`Ошибка при регистрации: ${(err as Error).message}`);
     }
+  };
+
+  const handleAllowClick = () => {
+    sendLogToServer("Кнопка 'Разрешить' нажата");
+    registerUser();
   };
 
   const updateCoins = () => {
@@ -126,7 +133,7 @@ const App: React.FC = () => {
             <p>Разрешите использовать ваше имя и аватар для персонализации?</p>
             <p>Имя: {userName}</p>
             {avatarUrl && <img src={avatarUrl} alt="Аватар" style={{ width: "50px", height: "50px" }} />}
-            <button onClick={registerUser} className="button primary-button">
+            <button onClick={handleAllowClick} className="button primary-button">
               Разрешить
             </button>
             <button onClick={() => setShowRegisterPopup(false)} className="button close-button">
