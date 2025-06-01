@@ -7,7 +7,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: ["https://1vanch0s.github.io", "https://web.telegram.org", "https://abc123.ngrok.io"],
+  origin: ["https://1vanch0s.github.io", "https://web.telegram.org", "https://1181-2a0b-4140-b0d7-00-2.ngrok-free.app"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type"],
 }));
@@ -58,9 +58,17 @@ const initDb = async () => {
 
 initDb();
 
+// Новый эндпоинт для логов
+app.post("/log", (req, res) => {
+  const { message } = req.body;
+  console.log(`[Фронтенд-лог] ${new Date().toISOString()}: ${message}`);
+  res.status(200).json({ status: "Log received" });
+});
+
 app.post("/users", async (req, res) => {
   const { userId, username, avatarUrl } = req.body;
   if (!userId || !username) {
+    console.log("Ошибка: userId или username отсутствуют", { userId, username });
     return res.status(400).json({ error: "userId и username обязательны" });
   }
 
@@ -69,9 +77,10 @@ app.post("/users", async (req, res) => {
       "INSERT INTO users (user_id, username, avatar_url) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO NOTHING RETURNING *",
       [userId, username, avatarUrl]
     );
+    console.log("Пользователь зарегистрирован на сервере:", result.rows[0] || { userId, username, avatarUrl });
     res.status(201).json(result.rows[0] || { userId, username, avatarUrl });
   } catch (err) {
-    console.error("Ошибка при регистрации пользователя:", err);
+    console.error("Ошибка при регистрации пользователя на сервере:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -79,6 +88,7 @@ app.post("/users", async (req, res) => {
 app.post("/tasks/sync", async (req, res) => {
   const { userId, tasks } = req.body;
   if (!userId || !tasks) {
+    console.log("Ошибка: userId или tasks отсутствуют", { userId, tasks });
     return res.status(400).json({ error: "userId и tasks обязательны" });
   }
 
@@ -109,11 +119,12 @@ app.post("/tasks/sync", async (req, res) => {
 
     await client.query("COMMIT");
     client.release();
+    console.log(`Задачи синхронизированы для userId ${userId}`);
     res.status(200).json({ message: "Tasks synced successfully" });
   } catch (err) {
     await client.query("ROLLBACK");
     client.release();
-    console.error("Ошибка при синхронизации задач:", err);
+    console.error("Ошибка при синхронизации задач:", err.message);
     res.status(500).json({ error: err.message });
   }
 });

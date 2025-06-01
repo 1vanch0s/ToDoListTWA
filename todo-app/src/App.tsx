@@ -15,15 +15,28 @@ const App: React.FC = () => {
   const [userName, setUserName] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
+  // Функция для отправки логов на сервер
+  const sendLogToServer = async (message: string) => {
+    try {
+      await fetch(`${process.env.REACT_APP_API_URL}/log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+    } catch (err) {
+      // Лог ошибки отправки лога не отправляем, чтобы избежать бесконечного цикла
+    }
+  };
+
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
     if (!tg) {
-      console.error("Telegram WebApp is not available");
+      sendLogToServer("Telegram WebApp is not available");
       return;
     }
     tg.ready();
     const user = tg.initDataUnsafe.user;
-    console.log("Telegram user data:", tg.initDataUnsafe); // Отладка
+    sendLogToServer(`Telegram user data: ${JSON.stringify(tg.initDataUnsafe)}`); // Отладка
     if (user && user.id) {
       setChatId(user.id);
       setUserName(user.first_name + (user.last_name ? " " + user.last_name : ""));
@@ -32,18 +45,18 @@ const App: React.FC = () => {
         setShowRegisterPopup(true);
       }
     } else {
-      console.log("No user data from Telegram");
+      sendLogToServer("No user data from Telegram");
     }
   }, []);
 
   const registerUser = async () => {
     if (!chatId || !userName) {
-      console.log("Ошибка: chatId или userName отсутствуют", { chatId, userName });
+      sendLogToServer(`Ошибка: chatId или userName отсутствуют, chatId: ${chatId}, userName: ${userName}`);
       return;
     }
 
-    console.log("Попытка регистрации пользователя:", { userId: chatId.toString(), username: userName, avatarUrl });
-    console.log("API URL:", process.env.REACT_APP_API_URL); // Отладка
+    sendLogToServer(`Попытка регистрации пользователя: userId=${chatId}, username=${userName}, avatarUrl=${avatarUrl}`);
+    sendLogToServer(`API URL: ${process.env.REACT_APP_API_URL}`); // Отладка
 
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/users`, {
@@ -57,14 +70,14 @@ const App: React.FC = () => {
       });
       const responseData = await response.json(); // Читаем тело ответа
       if (response.ok) {
-        console.log("Пользователь успешно зарегистрирован:", responseData);
+        sendLogToServer(`Пользователь успешно зарегистрирован: ${JSON.stringify(responseData)}`);
         localStorage.setItem("isRegistered", "true");
         setShowRegisterPopup(false);
       } else {
-        console.error("Ошибка регистрации:", responseData.error || response.statusText);
+        sendLogToServer(`Ошибка регистрации: ${responseData.error || response.statusText}`);
       }
     } catch (err) {
-      console.error("Ошибка при регистрации:", (err as Error).message); // Приведение к Error
+      sendLogToServer(`Ошибка при регистрации: ${(err as Error).message}`);
     }
   };
 
