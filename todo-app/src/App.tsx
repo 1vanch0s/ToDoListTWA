@@ -23,6 +23,7 @@ const App: React.FC = () => {
     }
     tg.ready();
     const user = tg.initDataUnsafe.user;
+    console.log("Telegram user data:", tg.initDataUnsafe); // Отладка
     if (user && user.id) {
       setChatId(user.id);
       setUserName(user.first_name + (user.last_name ? " " + user.last_name : ""));
@@ -30,11 +31,19 @@ const App: React.FC = () => {
       if (!localStorage.getItem("isRegistered")) {
         setShowRegisterPopup(true);
       }
+    } else {
+      console.log("No user data from Telegram");
     }
   }, []);
 
   const registerUser = async () => {
-    if (!chatId || !userName) return;
+    if (!chatId || !userName) {
+      console.log("Ошибка: chatId или userName отсутствуют", { chatId, userName });
+      return;
+    }
+
+    console.log("Попытка регистрации пользователя:", { userId: chatId.toString(), username: userName, avatarUrl });
+    console.log("API URL:", process.env.REACT_APP_API_URL); // Отладка
 
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/users`, {
@@ -46,15 +55,16 @@ const App: React.FC = () => {
           avatarUrl: avatarUrl,
         }),
       });
+      const responseData = await response.json(); // Читаем тело ответа
       if (response.ok) {
+        console.log("Пользователь успешно зарегистрирован:", responseData);
         localStorage.setItem("isRegistered", "true");
         setShowRegisterPopup(false);
-        console.log("Пользователь зарегистрирован:", { chatId, userName, avatarUrl });
       } else {
-        console.error("Ошибка регистрации:", await response.text());
+        console.error("Ошибка регистрации:", responseData.error || response.statusText);
       }
     } catch (err) {
-      console.error("Ошибка при регистрации:", err);
+      console.error("Ошибка при регистрации:", (err as Error).message); // Приведение к Error
     }
   };
 
@@ -111,36 +121,9 @@ const App: React.FC = () => {
             </button>
           </div>
         )}
-        
       </div>
     </Router>
   );
-
-  // return (
-  //   <Router>
-  //     <div className="app">
-  //       <Routes>
-  //         <Route path="/" element={<Tasks updateCoins={updateCoins} />} />
-  //         <Route path="/rewards" element={<Rewards updateCoins={updateCoins} />} />
-  //         <Route path="/profile" element={<Profile />} />
-  //       </Routes>
-  //       {showRegisterPopup && (
-  //         <div className="popup">
-  //           <h2>Регистрация</h2>
-  //           <p>Разрешите использовать ваше имя и аватар для персонализации?</p>
-  //           <p>Имя: {userName}</p>
-  //           {avatarUrl && <img src={avatarUrl} alt="Аватар" style={{ width: "50px", height: "50px" }} />}
-  //           <button onClick={registerUser} className="button primary-button">
-  //             Разрешить
-  //           </button>
-  //           <button onClick={() => setShowRegisterPopup(false)} className="button close-button">
-  //             Отмена
-  //           </button>
-  //         </div>
-  //       )}
-  //     </div>
-  //   </Router>
-  // );
 };
 
 export default App;
