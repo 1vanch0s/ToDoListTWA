@@ -7,7 +7,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: ["https://1vanch0s.github.io/ToDoListTWA/", "https://web.telegram.org", "https://d963-2a0b-4140-b0d7-00-2.ngrok-free.app"],
+  origin: ["https://1vanch0s.github.io", "https://web.telegram.org", "https://d963-2a0b-4140-b0d7-00-2.ngrok-free.app"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type"],
 }));
@@ -17,6 +17,7 @@ app.use(express.json());
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   console.log("Тело запроса:", req.body);
+  console.log("Заголовки:", req.headers);
   next();
 });
 
@@ -52,13 +53,13 @@ const initDb = async () => {
     `);
     console.log("Таблицы users и tasks созданы");
   } catch (err) {
-    console.error("Ошибка при создании таблиц:", err);
+    console.error("Ошибка при создании таблиц:", err.message);
   }
 };
 
 initDb();
 
-// Новый эндпоинт для логов
+// Эндпоинт для логов
 app.post("/log", (req, res) => {
   const { message } = req.body;
   console.log(`[Фронтенд-лог] ${new Date().toISOString()}: ${message}`);
@@ -96,10 +97,8 @@ app.post("/tasks/sync", async (req, res) => {
     const client = await pool.connect();
     await client.query("BEGIN");
 
-    // Удаляем старые задачи пользователя
     await client.query("DELETE FROM tasks WHERE user_id = $1", [userId]);
 
-    // Добавляем новые задачи
     const insertPromises = tasks.map((task) =>
       client.query(
         "INSERT INTO tasks (user_id, task_id, title, deadline, description, status, coins, difficulty) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",

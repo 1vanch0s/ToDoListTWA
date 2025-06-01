@@ -18,13 +18,30 @@ const App: React.FC = () => {
   // Функция для отправки логов на сервер
   const sendLogToServer = async (message: string) => {
     try {
-      await fetch(`${process.env.REACT_APP_API_URL}/log`, {
+      const apiUrl = process.env.REACT_APP_API_URL || "undefined";
+      const logUrl = `${apiUrl}/log`;
+      const logBody = JSON.stringify({ message });
+      await fetch(logUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: logBody,
+      });
+      // Лог успешной отправки (для проверки)
+      await fetch(logUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: `Лог успешно отправлен: ${message}` }),
       });
     } catch (err) {
-      // Лог ошибки отправки лога не отправляем, чтобы избежать бесконечного цикла
+      // Попробуем отправить лог об ошибке
+      const apiUrl = process.env.REACT_APP_API_URL || "undefined";
+      await fetch(`${apiUrl}/log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: `Ошибка отправки лога: ${(err as Error).message}` }),
+      }).catch(() => {
+        // Если и это не сработало, ничего не делаем
+      });
     }
   };
 
@@ -36,7 +53,7 @@ const App: React.FC = () => {
     }
     tg.ready();
     const user = tg.initDataUnsafe.user;
-    sendLogToServer(`Telegram user data: ${JSON.stringify(tg.initDataUnsafe)}`); // Отладка
+    sendLogToServer(`Telegram user data: ${JSON.stringify(tg.initDataUnsafe)}`);
     if (user && user.id) {
       setChatId(user.id);
       setUserName(user.first_name + (user.last_name ? " " + user.last_name : ""));
@@ -133,7 +150,7 @@ const App: React.FC = () => {
             <p>Разрешите использовать ваше имя и аватар для персонализации?</p>
             <p>Имя: {userName}</p>
             {avatarUrl && <img src={avatarUrl} alt="Аватар" style={{ width: "50px", height: "50px" }} />}
-            <button onClick={handleAllowClick} className="button primary-button">
+            <button onClick={handleAllowClick} onTouchStart={handleAllowClick} className="button primary-button">
               Разрешить
             </button>
             <button onClick={() => setShowRegisterPopup(false)} className="button close-button">
