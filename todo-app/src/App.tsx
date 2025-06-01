@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import Tasks from "./components/Tasks";
-import Rewards from "./components/Rewards";
-import Profile from "./components/Profile";
-import "../styles.css";
+import { BrowserRouter as Router, Route, Routes, NavLink } from "react-router-dom";
+import Tasks from "./pages/Tasks";
+import Rewards from "./pages/Rewards";
+import Profile from "./pages/Profile";
+import "./styles.css";
 
 const App: React.FC = () => {
   const [coins, setCoins] = useState<number>(() => {
@@ -66,12 +66,37 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <div className="app">
+      <div>
+        <header className="header">
+          <div className="user-info">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Аватар" className="avatar-image" />
+            ) : (
+              <div className="avatar"></div>
+            )}
+            <span>{userName}</span>
+          </div>
+          <div className="coins">
+            <span>{coins} 💰</span>
+          </div>
+        </header>
+        <nav className="nav">
+          <NavLink to="/" className={({ isActive }) => isActive ? "nav-button active" : "nav-button"}>
+            Задачи
+          </NavLink>
+          <NavLink to="/rewards" className={({ isActive }) => isActive ? "nav-button active" : "nav-button"}>
+            Награды
+          </NavLink>
+          <NavLink to="/profile" className={({ isActive }) => isActive ? "nav-button active" : "nav-button"}>
+            Профиль
+          </NavLink>
+        </nav>
         <Routes>
           <Route path="/" element={<Tasks updateCoins={updateCoins} />} />
-          <Route path="/rewards" element={<Rewards updateCoins={updateCoins} />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/rewards" element={<Rewards updateCoins={updateCoins} />} />
         </Routes>
+
         {showRegisterPopup && (
           <div className="popup">
             <h2>Регистрация</h2>
@@ -86,9 +111,36 @@ const App: React.FC = () => {
             </button>
           </div>
         )}
+        
       </div>
     </Router>
   );
+
+  // return (
+  //   <Router>
+  //     <div className="app">
+  //       <Routes>
+  //         <Route path="/" element={<Tasks updateCoins={updateCoins} />} />
+  //         <Route path="/rewards" element={<Rewards updateCoins={updateCoins} />} />
+  //         <Route path="/profile" element={<Profile />} />
+  //       </Routes>
+  //       {showRegisterPopup && (
+  //         <div className="popup">
+  //           <h2>Регистрация</h2>
+  //           <p>Разрешите использовать ваше имя и аватар для персонализации?</p>
+  //           <p>Имя: {userName}</p>
+  //           {avatarUrl && <img src={avatarUrl} alt="Аватар" style={{ width: "50px", height: "50px" }} />}
+  //           <button onClick={registerUser} className="button primary-button">
+  //             Разрешить
+  //           </button>
+  //           <button onClick={() => setShowRegisterPopup(false)} className="button close-button">
+  //             Отмена
+  //           </button>
+  //         </div>
+  //       )}
+  //     </div>
+  //   </Router>
+  // );
 };
 
 export default App;
