@@ -7,7 +7,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: ["https://1vanch0s.github.io", "https://web.telegram.org", "https://d963-2a0b-4140-b0d7-00-2.ngrok-free.app"],
+  origin: ["https://1vanch0s.github.io", "https://web.telegram.org", "https://778c-2a0b-4140-b0d7-00-2.ngrok-free.app"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type"],
 }));
@@ -19,6 +19,24 @@ app.use((req, res, next) => {
   console.log("Тело запроса:", req.body);
   console.log("Заголовки:", req.headers);
   next();
+});
+
+// Обработчик для корневого пути
+app.get("/", (req, res) => {
+  console.log("Получен GET запрос на корень");
+  res.status(200).json({ message: "API работает, используйте /log, /users или /tasks/sync с POST" });
+});
+
+// Обработчик для получения списка пользователей (для отладки)
+app.get("/users", async (req, res) => {
+  console.log("Получен GET запрос на /users");
+  try {
+    const result = await pool.query("SELECT * FROM users");
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("Ошибка при получении пользователей:", err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 const pool = new Pool({
@@ -59,7 +77,6 @@ const initDb = async () => {
 
 initDb();
 
-// Эндпоинт для логов
 app.post("/log", (req, res) => {
   const { message } = req.body;
   console.log(`[Фронтенд-лог] ${new Date().toISOString()}: ${message}`);
