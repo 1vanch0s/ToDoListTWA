@@ -81,18 +81,9 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
     }
     tg.ready();
     const user = tg.initDataUnsafe.user;
-    console.log("Telegram user data:", tg.initDataUnsafe);
+    console.log("Telegram user data:", tg.initDataUnsafe); // Отладка
     if (user && user.id) {
       setChatId(user.id);
-      // Регистрация пользователя в бэкенде
-      fetch('http://localhost:3000/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id.toString(),
-          username: user.first_name + (user.last_name ? " " + user.last_name : ""),
-        }),
-      }).catch(err => console.error('Ошибка регистрации пользователя:', err));
     } else {
       console.log("No user data from Telegram");
     }
@@ -105,7 +96,7 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
       return;
     }
 
-    const botToken = import.meta.env.VITE_BOT_TOKEN;
+    const botToken = import.meta.env.VITE_BOT_TOKEN; 
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
     try {
       const response = await fetch(url, {
@@ -129,30 +120,48 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
 
   // Загрузка задач и статистики при монтировании
   useEffect(() => {
-    if (!chatId) return;
-
-    const fetchTasks = async () => {
-      try {
-        const response = await fetch(`http://localhost:3000/tasks?userId=${chatId}`);
-        const data = await response.json();
-        setTasks(data.map((task: any) => ({
-          id: task.id.toString(),
-          title: task.title,
-          deadline: task.deadline,
-          description: task.description,
-          status: task.status,
-          coins: task.coins,
-          difficulty: task.difficulty,
-        })));
-      } catch (err) {
-        console.error("Ошибка загрузки задач:", err);
+    try {
+      const storedTasks = localStorage.getItem("tasks");
+      if (storedTasks) {
+        const parsedTasks = JSON.parse(storedTasks);
+        if (Array.isArray(parsedTasks)) {
+          setTasks(parsedTasks);
+        } else {
+          setTasks([]);
+          localStorage.setItem("tasks", JSON.stringify([]));
+        }
+      } else {
+        localStorage.setItem("tasks", JSON.stringify([]));
         setTasks([]);
       }
-    };
 
-    fetchTasks();
-    checkDeadlines();
-  }, [chatId]);
+      const storedStats = localStorage.getItem("stats");
+      if (storedStats) {
+        const parsedStats = JSON.parse(storedStats);
+        const migratedStats = {
+          ...initialStats,
+          ...parsedStats,
+          completed: parsedStats.completed || initialStats.completed,
+          failed: parsedStats.failed || initialStats.failed,
+          totalCoins: parsedStats.totalCoins || initialStats.totalCoins,
+          xp: parsedStats.xp || initialStats.xp,
+          level: calculateLevel(parsedStats.xp || 0),
+          totalEarnedCoins: parsedStats.totalEarnedCoins || 0,
+          totalEarnedXp: parsedStats.totalEarnedXp || 0,
+          purchases: parsedStats.purchases || 0,
+        };
+        localStorage.setItem("stats", JSON.stringify(migratedStats));
+      } else {
+        localStorage.setItem("stats", JSON.stringify(initialStats));
+      }
+
+      checkDeadlines();
+    } catch (error) {
+      console.error("Error loading from localStorage:", error);
+      setTasks([]);
+      localStorage.setItem("tasks", JSON.stringify([]));
+    }
+  }, []);
 
   // Проверка дедлайнов каждые 10 секунд
   useEffect(() => {
@@ -180,8 +189,8 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
     }
   };
 
-  const addTask = async () => {
-    if (newTask.title.trim() === "" || !chatId) return;
+  const addTask = () => {
+    if (newTask.title.trim() === "") return;
 
     const newTaskItem: Task = {
       id: Date.now().toString(),
@@ -193,123 +202,66 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
       difficulty: newTask.difficulty,
     };
 
-    try {
-      const response = await fetch('http://localhost:3000/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: chatId.toString(),
-          title: newTaskItem.title,
-          description: newTaskItem.description,
-          difficulty: newTaskItem.difficulty,
-          deadline: newTaskItem.deadline,
-          status: newTaskItem.status,
-          coins: newTaskItem.coins,
-        }),
-      });
-      const savedTask = await response.json();
-
-      setTasks((prevTasks) => [...prevTasks, {
-        id: savedTask.id.toString(),
-        title: savedTask.title,
-        deadline: savedTask.deadline,
-        description: savedTask.description,
-        status: savedTask.status,
-        coins: savedTask.coins,
-        difficulty: savedTask.difficulty,
-      }]);
+    setTasks((prevTasks) => {
+      const updatedTasks = [...prevTasks, newTaskItem];
+      localStorage.setItem("tasks", JSON.stringify(updatedTasks));
       sendNotification(`Новая задача добавлена: ${newTaskItem.title}${newTaskItem.deadline ? ` (Дедлайн: ${newTaskItem.deadline})` : ""}`);
-    } catch (err) {
-      console.error("Ошибка добавления задачи:", err);
-    }
+      return updatedTasks;
+    });
 
     setNewTask({ title: "", deadline: "", description: "", difficulty: "easy" });
     setShowAddPopup(false);
   };
 
-  const markTaskAsCompleted = async (taskId: string) => {
+  const markTaskAsCompleted = (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId);
-    if (!task || !chatId) return;
+    if (!task) return;
 
-    try {
-      const response = await fetch(`http://localhost:3000/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...task, status: "completed" }),
-      });
-      const updatedTask = await response.json();
-
-      setTasks((prevTasks) =>
-        prevTasks.map((t) =>
-          t.id === taskId ? { ...t, status: "completed" as Task["status"] } : t
-        )
+    setTasks((prevTasks) => {
+      const updatedTasks = prevTasks.map((t) =>
+        t.id === taskId ? { ...t, status: "completed" as Task["status"] } : t
       );
+      localStorage.setItem("tasks", JSON.stringify(updatedTasks));
       sendNotification(`Задача "${task.title}" выполнена! 🎉`);
+      return updatedTasks;
+    });
 
-      // Обновление статистики
-      const statsResponse = await fetch(`http://localhost:3000/stats/${chatId}`);
-      let stats = await statsResponse.json();
+    const stats = JSON.parse(localStorage.getItem("stats") || JSON.stringify(initialStats));
+    stats.completed[task.difficulty] = (stats.completed[task.difficulty] || 0) + 1;
+    stats.totalCoins += task.coins;
+    const oldLevel = stats.level;
+    const xpReward = task.difficulty === "easy" ? 10 : task.difficulty === "medium" ? 20 : 30;
+    stats.xp += xpReward;
+    stats.level = calculateLevel(stats.xp);
+    stats.totalEarnedCoins = (stats.totalEarnedCoins || 0) + task.coins;
+    stats.totalEarnedXp = (stats.totalEarnedXp || 0) + xpReward;
 
-      stats.completed[task.difficulty] = (stats.completed[task.difficulty] || 0) + 1;
-      stats.total_coins += task.coins;
-      const oldLevel = stats.level;
-      const xpReward = task.difficulty === "easy" ? 10 : task.difficulty === "medium" ? 20 : 30;
-      stats.xp += xpReward;
-      stats.level = calculateLevel(stats.xp);
-      stats.total_earned_coins = (stats.total_earned_coins || 0) + task.coins;
-      stats.total_earned_xp = (stats.total_earned_xp || 0) + xpReward;
-
-      await fetch(`http://localhost:3000/stats/${chatId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stats),
-      });
-
-      if (stats.level > oldLevel) {
-        setNewLevel(stats.level);
-        setShowLevelUpPopup(true);
-        setTimeout(() => setShowLevelUpPopup(false), 3000);
-      }
-
-      updateCoins();
-    } catch (err) {
-      console.error("Ошибка при завершении задачи:", err);
+    if (stats.level > oldLevel) {
+      setNewLevel(stats.level);
+      setShowLevelUpPopup(true);
+      setTimeout(() => setShowLevelUpPopup(false), 3000);
     }
+
+    localStorage.setItem("stats", JSON.stringify(stats));
+    updateCoins();
   };
 
-  const markTaskAsFailed = async (taskId: string) => {
+  const markTaskAsFailed = (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId);
-    if (!task || !chatId) return;
+    if (!task) return;
 
-    try {
-      const response = await fetch(`http://localhost:3000/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...task, status: "failed" }),
-      });
-      const updatedTask = await response.json();
-
-      setTasks((prevTasks) =>
-        prevTasks.map((t) =>
-          t.id === taskId ? { ...t, status: "failed" as Task["status"] } : t
-        )
+    setTasks((prevTasks) => {
+      const updatedTasks = prevTasks.map((t) =>
+        t.id === taskId ? { ...t, status: "failed" as Task["status"] } : t
       );
+      localStorage.setItem("tasks", JSON.stringify(updatedTasks));
       sendNotification(`Задача "${task.title}" провалена. 😞`);
+      return updatedTasks;
+    });
 
-      // Обновление статистики
-      const statsResponse = await fetch(`http://localhost:3000/stats/${chatId}`);
-      let stats = await statsResponse.json();
-
-      stats.failed[task.difficulty] = (stats.failed[task.difficulty] || 0) + 1;
-
-      await fetch(`http://localhost:3000/stats/${chatId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stats),
-      });
-    } catch (err) {
-      console.error("Ошибка при провале задачи:", err);
-    }
+    const stats = JSON.parse(localStorage.getItem("stats") || JSON.stringify(initialStats));
+    stats.failed[task.difficulty] = (stats.failed[task.difficulty] || 0) + 1;
+    localStorage.setItem("stats", JSON.stringify(stats));
   };
 
   const handleDeadlineConfirmation = (completed: boolean) => {
