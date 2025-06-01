@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "../styles.css";
+import '../styles.css';
 
 interface Stats {
   completed: { easy: number; medium: number; hard: number };
@@ -12,17 +12,33 @@ interface Stats {
   purchases: number;
 }
 
+const initialStats: Stats = {
+  completed: { easy: 0, medium: 0, hard: 0 },
+  failed: { easy: 0, medium: 0, hard: 0 },
+  totalCoins: 0,
+  xp: 0,
+  level: 1,
+  totalEarnedCoins: 0,
+  totalEarnedXp: 0,
+  purchases: 0,
+};
+
+// Функция для вычисления XP, необходимого для уровня
+const xpForLevel = (level: number): number => {
+  if (level <= 1) return 0;
+  let totalXp = 0;
+  for (let i = 2; i <= level; i++) {
+    const tier = Math.floor((i - 1) / 10);
+    totalXp += 100 + tier * 50;
+  }
+  return totalXp;
+};
+
+// Функция для вычисления следующего уровня
+const nextLevelXp = (level: number): number => xpForLevel(level + 1);
+
 const Profile: React.FC = () => {
-  const [stats, setStats] = useState<Stats>({
-    completed: { easy: 0, medium: 0, hard: 0 },
-    failed: { easy: 0, medium: 0, hard: 0 },
-    totalCoins: 0,
-    xp: 0,
-    level: 1,
-    totalEarnedCoins: 0,
-    totalEarnedXp: 0,
-    purchases: 0,
-  });
+  const [stats, setStats] = useState<Stats>(initialStats);
   const [userName, setUserName] = useState("Имя пользователя");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
@@ -36,96 +52,38 @@ const Profile: React.FC = () => {
       if (user.photo_url) {
         setAvatarUrl(user.photo_url);
       }
-      // Регистрация пользователя в бэкенде
-      fetch('http://localhost:3000/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id.toString(),
-          username: user.first_name + (user.last_name ? " " + user.last_name : ""),
-        }),
-      }).catch(err => console.error('Ошибка регистрации пользователя:', err));
     }
   }, []);
 
   useEffect(() => {
-    const userId = tg.initDataUnsafe.user?.id?.toString();
-    if (userId) {
-      fetch(`http://localhost:3000/stats/${userId}`)
-        .then(response => response.json())
-        .then(data => {
-          setStats({
-            completed: {
-              easy: data.completed_easy || 0,
-              medium: data.completed_medium || 0,
-              hard: data.completed_hard || 0,
-            },
-            failed: {
-              easy: data.failed_easy || 0,
-              medium: data.failed_medium || 0,
-              hard: data.failed_hard || 0,
-            },
-            totalCoins: data.total_coins || 0,
-            xp: data.xp || 0,
-            level: data.level || 1,
-            totalEarnedCoins: data.total_earned_coins || 0,
-            totalEarnedXp: data.total_earned_xp || 0,
-            purchases: data.purchases || 0,
-          });
-        })
-        .catch(err => console.error('Ошибка загрузки статистики:', err));
+    try {
+      const storedStats = localStorage.getItem("stats");
+      if (storedStats) {
+        const parsedStats: Stats = JSON.parse(storedStats);
+        const calculatedLevel = parsedStats.xp >= nextLevelXp(parsedStats.level)
+          ? parsedStats.level + 1
+          : parsedStats.level;
+        setStats({ ...parsedStats, level: calculatedLevel });
+      } else {
+        setStats(initialStats);
+        localStorage.setItem("stats", JSON.stringify(initialStats));
+      }
+    } catch (error) {
+      console.error("Error loading stats from localStorage:", error);
+      setStats(initialStats);
+      localStorage.setItem("stats", JSON.stringify(initialStats));
     }
   }, []);
-
-  const xpForLevel = (level: number): number => {
-    if (level <= 1) return 0;
-    let totalXp = 0;
-    for (let i = 2; i <= level; i++) {
-      const tier = Math.floor((i - 1) / 10);
-      totalXp += 100 + tier * 50;
-    }
-    return totalXp;
-  };
-
-  const nextLevelXp = (level: number): number => xpForLevel(level + 1);
 
   const progress = stats.xp > 0
     ? Math.min((stats.xp - xpForLevel(stats.level)) / (nextLevelXp(stats.level) - xpForLevel(stats.level)) * 100, 100)
     : 0;
 
   const resetStats = () => {
-    const userId = tg.initDataUnsafe.user?.id?.toString();
-    if (userId) {
-      fetch(`http://localhost:3000/stats/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          completed_easy: 0,
-          completed_medium: 0,
-          completed_hard: 0,
-          failed_easy: 0,
-          failed_medium: 0,
-          failed_hard: 0,
-          total_coins: 0,
-          xp: 0,
-          level: 1,
-          total_earned_coins: 0,
-          total_earned_xp: 0,
-          purchases: 0,
-        }),
-      })
-        .then(() => setStats({
-          completed: { easy: 0, medium: 0, hard: 0 },
-          failed: { easy: 0, medium: 0, hard: 0 },
-          totalCoins: 0,
-          xp: 0,
-          level: 1,
-          totalEarnedCoins: 0,
-          totalEarnedXp: 0,
-          purchases: 0,
-        }))
-        .catch(err => console.error('Ошибка сброса статистики:', err));
-    }
+    console.log("Resetting stats...");
+    localStorage.setItem("stats", JSON.stringify(initialStats));
+    localStorage.setItem("rewards", JSON.stringify([]));
+    setStats(initialStats);
   };
 
   return (

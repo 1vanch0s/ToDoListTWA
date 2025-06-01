@@ -1,116 +1,165 @@
 import React, { useState, useEffect } from "react";
-import "../styles.css";
+import '../styles.css';
 
 interface Reward {
-  id: number;
+  id: string;
   title: string;
+  description: string;
   cost: number;
   purchased: boolean;
 }
 
-const Rewards: React.FC<{ updateCoins: () => void }> = ({ updateCoins }) => {
-  const [rewards, setRewards] = useState<Reward[]>([]);
-  const [coins, setCoins] = useState(0);
-  const [userId, setUserId] = useState<string | null>(null);
+interface Stats {
+  completed: { easy: number; medium: number; hard: number };
+  failed: { easy: number; medium: number; hard: number };
+  totalCoins: number;
+  xp: number;
+  level: number;
+  totalEarnedCoins: number; // Добавляем общее количество заработанных монет
+  totalEarnedXp: number; // Добавляем общее количество заработанного опыта
+  purchases: number; // Счётчик покупок
+}
 
-  // Загрузка данных пользователя из Telegram
-  const tg = (window as any).Telegram.WebApp;
+interface RewardsProps {
+  updateCoins: () => void;
+}
+
+const Rewards: React.FC<RewardsProps> = ({ updateCoins }) => {
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [newReward, setNewReward] = useState({ title: "", description: "", cost: "" });
+  const [showAddPopup, setShowAddPopup] = useState(false);
+
   useEffect(() => {
-    tg.ready();
-    const user = tg.initDataUnsafe.user;
-    if (user && user.id) {
-      setUserId(user.id.toString());
-      // Регистрация пользователя в бэкенде
-      fetch('http://localhost:3000/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id.toString(),
-          username: user.first_name + (user.last_name ? " " + user.last_name : ""),
-        }),
-      }).catch(err => console.error('Ошибка регистрации пользователя:', err));
+    const storedRewards = localStorage.getItem("rewards");
+    if (storedRewards) {
+      setRewards(JSON.parse(storedRewards));
+    } else {
+      localStorage.setItem("rewards", JSON.stringify([]));
     }
   }, []);
 
-  // Загрузка наград
-  useEffect(() => {
-    if (!userId) return;
-    fetch(`http://localhost:3000/rewards?userId=${userId}`)
-      .then(response => response.json())
-      .then(data => setRewards(data))
-      .catch(err => console.error('Ошибка загрузки наград:', err));
-  }, [userId]);
+  const addReward = () => {
+    if (newReward.title.trim() === "" || newReward.cost.trim() === "") return;
 
-  // Загрузка статистики для получения количества монет
-  useEffect(() => {
-    if (!userId) return;
-    fetch(`http://localhost:3000/stats/${userId}`)
-      .then(response => response.json())
-      .then(data => setCoins(data.total_coins || 0))
-      .catch(err => console.error('Ошибка загрузки статистики:', err));
-  }, [userId]);
+    const costValue = parseInt(newReward.cost);
+    if (isNaN(costValue) || costValue <= 0) return;
 
-  const purchaseReward = async (id: number, cost: number) => {
-    if (!userId || coins < cost) return;
+    const newRewardItem: Reward = {
+      id: Date.now().toString(),
+      title: newReward.title,
+      description: newReward.description,
+      cost: costValue,
+      purchased: false,
+    };
 
-    try {
-      const reward = rewards.find(r => r.id === id);
-      if (!reward) return;
+    setRewards((prevRewards) => {
+      const updatedRewards = [...prevRewards, newRewardItem];
+      localStorage.setItem("rewards", JSON.stringify(updatedRewards));
+      return updatedRewards;
+    });
 
-      // Обновление награды
-      await fetch(`http://localhost:3000/rewards/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...reward, purchased: true }),
-      });
+    setNewReward({ title: "", description: "", cost: "" });
+    setShowAddPopup(false);
+  };
 
-      // Обновление статистики
-      const statsResponse = await fetch(`http://localhost:3000/stats/${userId}`);
-      let stats = await statsResponse.json();
-      stats.total_coins -= cost;
-      stats.purchases += 1;
+  const purchaseReward = (rewardId: string) => {
+    const reward = rewards.find((r) => r.id === rewardId);
+    if (!reward) return;
 
-      await fetch(`http://localhost:3000/stats/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stats),
-      });
-
-      setRewards(rewards.map(r => r.id === id ? { ...r, purchased: true } : r));
-      setCoins(stats.total_coins);
-      updateCoins();
-    } catch (err) {
-      console.error('Ошибка покупки награды:', err);
+    const stats: Stats = JSON.parse(localStorage.getItem("stats") || "{}");
+    if (!stats.totalCoins || stats.totalCoins < reward.cost) {
+      alert("Недостаточно монет для покупки этой награды!");
+      return;
     }
+
+    // Вычитаем стоимость из текущих монет
+    stats.totalCoins -= reward.cost;
+    // Увеличиваем счётчик покупок
+    stats.purchases = (stats.purchases || 0) + 1;
+    // Обновляем общее количество заработанных монет (например, увеличиваем при выполнении задач)
+    localStorage.setItem("stats", JSON.stringify(stats));
+
+    updateCoins();
+  };
+
+  const deleteReward = (rewardId: string) => {
+    const updatedRewards = rewards.filter((r) => r.id !== rewardId);
+    setRewards(updatedRewards);
+    localStorage.setItem("rewards", JSON.stringify(updatedRewards));
   };
 
   return (
-    <div style={{ backgroundColor: "#ffffff" }}>
+    <div>
       <main className="main">
-        <h2>Награды</h2>
-        <p>Ваши монеты: {coins} 💰</p>
-        <ul className="task-list">
-          {rewards.length > 0 ? (
-            rewards.map((reward) => (
-              <li key={reward.id} className="task-card reward-card">
-                <div>
-                  <h3>{reward.title}</h3>
-                  <p>Стоимость: {reward.cost} 💰</p>
-                </div>
-                <button
-                  onClick={() => purchaseReward(reward.id, reward.cost)}
-                  disabled={reward.purchased || coins < reward.cost}
-                  className="button"
-                >
-                  {reward.purchased ? "Куплено" : "Купить"}
-                </button>
-              </li>
-            ))
+        <div className="rewards-grid">
+          {rewards.length === 0 ? (
+            <p className="empty-message">Нет наград</p>
           ) : (
-            <li className="empty-message">Нет наград</li>
+            rewards.map((reward) => (
+              <div key={reward.id} className="reward-card">
+                <h3>{reward.title}</h3>
+                <p>{reward.description || "Нет описания"}</p>
+                <div className="reward-cost">
+                  <span>💰 {reward.cost}</span>
+                </div>
+                <div className="reward-actions">
+                  <button
+                    onClick={() => purchaseReward(reward.id)}
+                    className="button purchase-button"
+                  >
+                    Купить
+                  </button>
+                  <button
+                    onClick={() => deleteReward(reward.id)}
+                    className="button delete-button"
+                  >
+                    Удалить
+                  </button>
+                </div>
+              </div>
+            ))
           )}
-        </ul>
+        </div>
       </main>
+      <button
+        onClick={() => setShowAddPopup(true)}
+        className="add-button"
+      >
+        +
+      </button>
+
+      {/* Попап для добавления награды */}
+      {showAddPopup && (
+        <div className="popup">
+          <h2>Добавить награду</h2>
+          <input
+            type="text"
+            value={newReward.title}
+            onChange={(e) => setNewReward({ ...newReward, title: e.target.value })}
+            placeholder="Название"
+            className="popup-input"
+          />
+          <textarea
+            value={newReward.description}
+            onChange={(e) => setNewReward({ ...newReward, description: e.target.value })}
+            placeholder="Описание"
+            className="popup-textarea"
+          />
+          <input
+            type="number"
+            value={newReward.cost}
+            onChange={(e) => setNewReward({ ...newReward, cost: e.target.value })}
+            placeholder="Стоимость (монеты)"
+            className="popup-input"
+          />
+          <button onClick={addReward} className="button primary-button">
+            Добавить
+          </button>
+          <button onClick={() => setShowAddPopup(false)} className="button close-button">
+            Закрыть
+          </button>
+        </div>
+      )}
     </div>
   );
 };
