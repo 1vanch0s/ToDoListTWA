@@ -7,7 +7,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: ["https://1vanch0s.github.io", "https://web.telegram.org", "https://1181-2a0b-4140-b0d7-00-2.ngrok-free.app"],
+  origin: ["https://1vanch0s.github.io", "https://web.telegram.org", "https://d963-2a0b-4140-b0d7-00-2.ngrok-free.app"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type"],
 }));
