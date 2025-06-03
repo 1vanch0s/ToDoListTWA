@@ -14,8 +14,8 @@ const App: React.FC = () => {
   const [chatId, setChatId] = useState<number | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [isRegistered, setIsRegistered] = useState<boolean>(!!localStorage.getItem("isRegistered")); // Новое состояние
 
+  // Функция для отправки логов на сервер
   const sendLogToServer = async (message: string) => {
     try {
       const apiUrl = process.env.REACT_APP_API_URL || "undefined";
@@ -26,18 +26,22 @@ const App: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: logBody,
       });
+      // Лог успешной отправки (для проверки)
       await fetch(logUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: `Лог успешно отправлен: ${message}` }),
       });
     } catch (err) {
+      // Попробуем отправить лог об ошибке
       const apiUrl = process.env.REACT_APP_API_URL || "undefined";
       await fetch(`${apiUrl}/log`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: `Ошибка отправки лога: ${(err as Error).message}` }),
-      }).catch(() => {});
+      }).catch(() => {
+        // Если и это не сработало, ничего не делаем
+      });
     }
   };
 
@@ -87,7 +91,6 @@ const App: React.FC = () => {
       if (response.ok) {
         sendLogToServer(`Пользователь успешно зарегистрирован: ${JSON.stringify(responseData)}`);
         localStorage.setItem("isRegistered", "true");
-        setIsRegistered(true); // Обновляем состояние
         setShowRegisterPopup(false);
       } else {
         sendLogToServer(`Ошибка регистрации: ${responseData.error || response.statusText}`);
@@ -99,16 +102,7 @@ const App: React.FC = () => {
 
   const handleAllowClick = () => {
     sendLogToServer("Кнопка 'Разрешить' нажата");
-    const tg = (window as any).Telegram?.WebApp;
-    if (tg) {
-      tg.requestWriteAccess(() => {
-        sendLogToServer("Доступ на запись предоставлен");
-        registerUser();
-      });
-    } else {
-      sendLogToServer("Telegram WebApp не доступен для запроса прав");
-      registerUser(); // Вызываем напрямую для локального тестирования
-    }
+    registerUser();
   };
 
   const updateCoins = () => {
@@ -116,23 +110,6 @@ const App: React.FC = () => {
     const totalCoins = savedStats ? JSON.parse(savedStats).totalCoins || 0 : 0;
     setCoins(totalCoins);
   };
-
-  if (showRegisterPopup || !isRegistered) {
-    return (
-      <div className="popup">
-        <h2>Регистрация</h2>
-        <p>Разрешите использовать ваше имя и аватар для персонализации?</p>
-        <p>Имя: {userName}</p>
-        {avatarUrl && <img src={avatarUrl} alt="Аватар" style={{ width: "50px", height: "50px" }} />}
-        <button onClick={handleAllowClick} onTouchStart={handleAllowClick} className="button primary-button">
-          Разрешить
-        </button>
-        <button onClick={() => setShowRegisterPopup(false)} className="button close-button">
-          Отмена
-        </button>
-      </div>
-    );
-  }
 
   return (
     <Router>
@@ -151,13 +128,13 @@ const App: React.FC = () => {
           </div>
         </header>
         <nav className="nav">
-          <NavLink to="/" className={({ isActive }) => (isActive ? "nav-button active" : "nav-button")}>
+          <NavLink to="/" className={({ isActive }) => isActive ? "nav-button active" : "nav-button"}>
             Задачи
           </NavLink>
-          <NavLink to="/rewards" className={({ isActive }) => (isActive ? "nav-button active" : "nav-button")}>
+          <NavLink to="/rewards" className={({ isActive }) => isActive ? "nav-button active" : "nav-button"}>
             Награды
           </NavLink>
-          <NavLink to="/profile" className={({ isActive }) => (isActive ? "nav-button active" : "nav-button")}>
+          <NavLink to="/profile" className={({ isActive }) => isActive ? "nav-button active" : "nav-button"}>
             Профиль
           </NavLink>
         </nav>
@@ -166,6 +143,21 @@ const App: React.FC = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/rewards" element={<Rewards updateCoins={updateCoins} />} />
         </Routes>
+
+        {showRegisterPopup && (
+          <div className="popup">
+            <h2>Регистрация</h2>
+            <p>Разрешите использовать ваше имя и аватар для персонализации?</p>
+            <p>Имя: {userName}</p>
+            {avatarUrl && <img src={avatarUrl} alt="Аватар" style={{ width: "50px", height: "50px" }} />}
+            <button onClick={handleAllowClick} onTouchStart={handleAllowClick} className="button primary-button">
+              Разрешить
+            </button>
+            <button onClick={() => setShowRegisterPopup(false)} className="button close-button">
+              Отмена
+            </button>
+          </div>
+        )}
       </div>
     </Router>
   );
