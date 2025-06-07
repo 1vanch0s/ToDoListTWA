@@ -8,7 +8,7 @@ import "./styles.css";
 
 // Существующий код остается без изменений
 const App: React.FC = () => {
-  console.log("App component is rendering");
+  // console.log("App component is rendering");
   const [coins, setCoins] = useState<number>(() => {
     const savedStats = localStorage.getItem("stats");
     return savedStats ? JSON.parse(savedStats).totalCoins || 0 : 0;
@@ -174,7 +174,6 @@ const App: React.FC = () => {
   return (
     <Router>
       <div>
-        {console.log("Rendering buttons and popups")} {/* Лог перед рендерингом */}
         <header className="header">
           <div className="user-info">
             {avatarUrl ? (
