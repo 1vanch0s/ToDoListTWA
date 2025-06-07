@@ -8,7 +8,7 @@ import "./styles.css";
 
 // Существующий код остается без изменений
 const App: React.FC = () => {
-  // console.log("App component is rendering");
+  console.log("App component is rendering"); // Лог начала рендеринга
   const [coins, setCoins] = useState<number>(() => {
     const savedStats = localStorage.getItem("stats");
     return savedStats ? JSON.parse(savedStats).totalCoins || 0 : 0;
@@ -28,7 +28,7 @@ const App: React.FC = () => {
   // Функция для отправки логов на сервер (существующая)
   const sendLogToServer = async (message: string) => {
     const apiUrl = process.env.REACT_APP_API_URL || "undefined";
-    console.log("API URL:", apiUrl); // Добавь этот лог в консоль браузера
+    console.log("API URL:", apiUrl); // Лог URL для отладки
     try {
         const logUrl = `${apiUrl}/log`;
         const logBody = JSON.stringify({ message });
@@ -54,6 +54,7 @@ const App: React.FC = () => {
 };
 
   useEffect(() => {
+    console.log("useEffect triggered"); // Лог начала useEffect
     const tg = (window as any).Telegram?.WebApp;
     if (!tg) {
       sendLogToServer("Telegram WebApp is not available");
@@ -61,6 +62,7 @@ const App: React.FC = () => {
     }
     tg.ready();
     const user = tg.initDataUnsafe.user;
+    console.log("Telegram user data:", user); // Лог данных пользователя
     sendLogToServer(`Telegram user data: ${JSON.stringify(tg.initDataUnsafe)}`);
     if (user && user.id) {
       setChatId(user.id);
@@ -121,6 +123,7 @@ const App: React.FC = () => {
   // Новая функция для регистрации через логин/пароль
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("handleSignup triggered", credentials); // Лог перед запросом
     try {
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/signup`, {
         username: credentials.username,
@@ -140,6 +143,7 @@ const App: React.FC = () => {
   // Новая функция для входа
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("handleLogin triggered", credentials); // Лог перед запросом
     try {
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/login`, {
         email: credentials.email,
@@ -159,6 +163,7 @@ const App: React.FC = () => {
 
   // Новая функция для выхода
   const handleLogout = () => {
+    console.log("handleLogout triggered"); // Лог выхода
     localStorage.removeItem("token");
     setIsAuthenticated(false);
     setUser(null);
