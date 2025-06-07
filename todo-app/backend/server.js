@@ -2,12 +2,14 @@ const express = require("express");
 const { Pool } = require("pg");
 const cors = require("cors");
 require("dotenv").config();
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: ["https://1vanch0s.github.io", "https://web.telegram.org", "https://3ebd-2a0b-4140-b0d7-00-2.ngrok-free.app"],
+  origin: ["https://1vanch0s.github.io", "https://web.telegram.org", "https://f0f9-2a0b-4140-b0d7-00-2.ngrok-free.app "],
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type"],
 }));
@@ -40,42 +42,132 @@ app.get("/users", async (req, res) => {
 });
 
 const pool = new Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "todolist",
-  password: "3003",
-  port: 5432,
+    connectionString: process.env.DATABASE_URL,
 });
 
-const initDb = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        user_id TEXT UNIQUE NOT NULL,
-        username TEXT,
-        avatar_url TEXT
-      );
-      CREATE TABLE IF NOT EXISTS tasks (
-        id SERIAL PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        task_id TEXT NOT NULL,
-        title TEXT NOT NULL,
-        deadline TEXT,
-        description TEXT,
-        status TEXT,
-        coins INTEGER,
-        difficulty TEXT,
-        FOREIGN KEY (user_id) REFERENCES users(user_id)
-      );
-    `);
-    console.log("Таблицы users и tasks созданы");
-  } catch (err) {
-    console.error("Ошибка при создании таблиц:", err.message);
-  }
+// const initDb = async () => {
+//   try {
+//     await pool.query(`
+//       CREATE TABLE IF NOT EXISTS users (
+//         id SERIAL PRIMARY KEY,
+//         user_id TEXT UNIQUE NOT NULL,
+//         username TEXT,
+//         avatar_url TEXT
+//       );
+//       CREATE TABLE IF NOT EXISTS tasks (
+//         id SERIAL PRIMARY KEY,
+//         user_id TEXT NOT NULL,
+//         task_id TEXT NOT NULL,
+//         title TEXT NOT NULL,
+//         deadline TEXT,
+//         description TEXT,
+//         status TEXT,
+//         coins INTEGER,
+//         difficulty TEXT,
+//         FOREIGN KEY (user_id) REFERENCES users(user_id)
+//       );
+//     `);
+//     console.log("Таблицы users и tasks созданы");
+//   } catch (err) {
+//     console.error("Ошибка при создании таблиц:", err.message);
+//   }
+// };
+
+// initDb();
+
+const createTables = async () => {
+    try {
+        // Таблица users
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                user_id TEXT UNIQUE,
+                username TEXT,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                avatar_url TEXT
+            );
+        `);
+
+        // Таблица tasks (оставляем как есть)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS tasks (
+                id SERIAL PRIMARY KEY,
+                user_id TEXT REFERENCES users(user_id),
+                task_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                deadline TEXT,
+                status TEXT,
+                coins INTEGER,
+                difficulty TEXT
+            );
+        `);
+
+        console.log("Tables created successfully");
+    } catch (err) {
+        console.error("Error creating tables:", err);
+    }
 };
 
-initDb();
+createTables();
+
+// Эндпоинт для регистрации
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        const result = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [email]
+        );
+        const user = result.rows[0];
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+        // Убрано expiresIn для бессрочного токена
+        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'your-secret-key');
+        res.status(200).json({ token, user: { id: user.id, username: user.username, email: user.email } });
+    } catch (err) {
+        console.error("Error during login:", err);
+        res.status(500).json({ error: 'Failed to login' });
+    }
+});
+
+// Эндпоинт для входа
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        const result = await pool.query(
+            `SELECT * FROM users WHERE email = $1`,
+            [email]
+        );
+        const user = result.rows[0];
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '1h' });
+        res.status(200).json({ token, user: { id: user.id, username: user.username, email: user.email } });
+    } catch (err) {
+        console.error("Error during login:", err);
+        res.status(500).json({ error: 'Failed to login' });
+    }
+});
+
+// Middleware для проверки токена (опционально)
+const authenticateToken = (req, res, next) => {
+    const token = req.headers['authorization']?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'No token provided' });
+    jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, user) => {
+        if (err) return res.status(403).json({ error: 'Invalid token' });
+        req.user = user;
+        next();
+    });
+};
+
+// Пример защищённого эндпоинта
+app.get('/profile', authenticateToken, (req, res) => {
+    res.json({ message: 'Protected data', userId: req.user.userId });
+});
 
 app.post("/log", (req, res) => {
   const { message } = req.body;

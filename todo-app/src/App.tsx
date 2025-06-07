@@ -3,8 +3,10 @@ import { BrowserRouter as Router, Route, Routes, NavLink } from "react-router-do
 import Tasks from "./pages/Tasks";
 import Rewards from "./pages/Rewards";
 import Profile from "./pages/Profile";
+import axios from "axios"; // Добавлена для HTTP-запросов
 import "./styles.css";
 
+// Существующий код остается без изменений
 const App: React.FC = () => {
   const [coins, setCoins] = useState<number>(() => {
     const savedStats = localStorage.getItem("stats");
@@ -15,7 +17,14 @@ const App: React.FC = () => {
   const [userName, setUserName] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  // Функция для отправки логов на сервер
+  // Новые состояния для авторизации через логин/пароль
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem("token"));
+  const [user, setUser] = useState<{ id: number; username: string; email: string } | null>(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showSignupPopup, setShowSignupPopup] = useState(false);
+  const [credentials, setCredentials] = useState({ email: "", password: "", username: "" });
+
+  // Функция для отправки логов на сервер (существующая)
   const sendLogToServer = async (message: string) => {
     try {
       const apiUrl = process.env.REACT_APP_API_URL || "undefined";
@@ -105,6 +114,58 @@ const App: React.FC = () => {
     registerUser();
   };
 
+  // Новая функция для обработки ввода
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCredentials({ ...credentials, [e.target.name]: e.target.value });
+  };
+
+  // Новая функция для регистрации через логин/пароль
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/signup`, {
+        username: credentials.username,
+        email: credentials.email,
+        password: credentials.password,
+      });
+      setUser(response.data);
+      setShowSignupPopup(false);
+      sendLogToServer(`Регистрация успешна для ${credentials.email}`);
+    } catch (err) {
+      console.error("Signup error:", err);
+      sendLogToServer(`Ошибка регистрации: ${(err as Error).message}`);
+      alert("Registration failed");
+    }
+  };
+
+  // Новая функция для входа
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/login`, {
+        email: credentials.email,
+        password: credentials.password,
+      });
+      localStorage.setItem("token", response.data.token);
+      setUser(response.data.user);
+      setIsAuthenticated(true);
+      setShowLoginPopup(false);
+      sendLogToServer(`Вход выполнен для ${credentials.email}`);
+    } catch (err) {
+      console.error("Login error:", err);
+      sendLogToServer(`Ошибка входа: ${(err as Error).message}`);
+      alert("Login failed");
+    }
+  };
+
+  // Новая функция для выхода
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setIsAuthenticated(false);
+    setUser(null);
+    sendLogToServer("Пользователь вышел");
+  };
+
   const updateCoins = () => {
     const savedStats = localStorage.getItem("stats");
     const totalCoins = savedStats ? JSON.parse(savedStats).totalCoins || 0 : 0;
@@ -122,19 +183,23 @@ const App: React.FC = () => {
               <div className="avatar"></div>
             )}
             <span>{userName}</span>
+            {/* Новый блок для отображения данных пользователя после входа через логин/пароль */}
+            {user && <span> | {user.username} (Email: {user.email})</span>}
           </div>
           <div className="coins">
             <span>{coins} 💰</span>
           </div>
+          {/* Новая кнопка выхода, если авторизован */}
+          {isAuthenticated && <button onClick={handleLogout}>Выйти</button>}
         </header>
         <nav className="nav">
-          <NavLink to="/" className={({ isActive }) => isActive ? "nav-button active" : "nav-button"}>
+          <NavLink to="/" className={({ isActive }) => (isActive ? "nav-button active" : "nav-button")}>
             Задачи
           </NavLink>
-          <NavLink to="/rewards" className={({ isActive }) => isActive ? "nav-button active" : "nav-button"}>
+          <NavLink to="/rewards" className={({ isActive }) => (isActive ? "nav-button active" : "nav-button")}>
             Награды
           </NavLink>
-          <NavLink to="/profile" className={({ isActive }) => isActive ? "nav-button active" : "nav-button"}>
+          <NavLink to="/profile" className={({ isActive }) => (isActive ? "nav-button active" : "nav-button")}>
             Профиль
           </NavLink>
         </nav>
@@ -146,7 +211,7 @@ const App: React.FC = () => {
 
         {showRegisterPopup && (
           <div className="popup">
-            <h2>Регистрация</h2>
+            <h2>Регистрация (Telegram)</h2>
             <p>Разрешите использовать ваше имя и аватар для персонализации?</p>
             <p>Имя: {userName}</p>
             {avatarUrl && <img src={avatarUrl} alt="Аватар" style={{ width: "50px", height: "50px" }} />}
@@ -156,6 +221,79 @@ const App: React.FC = () => {
             <button onClick={() => setShowRegisterPopup(false)} className="button close-button">
               Отмена
             </button>
+          </div>
+        )}
+
+        {/* Новый попап для входа */}
+        {showLoginPopup && (
+          <div className="popup">
+            <h2>Вход</h2>
+            <form onSubmit={handleLogin}>
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={credentials.email}
+                onChange={handleInputChange}
+              />
+              <input
+                type="password"
+                name="password"
+                placeholder="Password"
+                value={credentials.password}
+                onChange={handleInputChange}
+              />
+              <button type="submit" className="button primary-button">
+                Войти
+              </button>
+              <button onClick={() => setShowLoginPopup(false)} className="button close-button">
+                Закрыть
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Новый попап для регистрации */}
+        {showSignupPopup && (
+          <div className="popup">
+            <h2>Регистрация</h2>
+            <form onSubmit={handleSignup}>
+              <input
+                type="text"
+                name="username"
+                placeholder="Username"
+                value={credentials.username}
+                onChange={handleInputChange}
+              />
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={credentials.email}
+                onChange={handleInputChange}
+              />
+              <input
+                type="password"
+                name="password"
+                placeholder="Password"
+                value={credentials.password}
+                onChange={handleInputChange}
+              />
+              <button type="submit" className="button primary-button">
+                Зарегистрироваться
+              </button>
+              <button onClick={() => setShowSignupPopup(false)} className="button close-button">
+                Закрыть
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Новая кнопка для открытия попапов, если не авторизован */}
+        {!isAuthenticated && !showRegisterPopup && (
+          <div className="auth-buttons">
+            <button onClick={() => setShowLoginPopup(true)}>Войти</button>
+            <button onClick={() => setShowSignupPopup(true)}>Зарегистрироваться</button>
           </div>
         )}
       </div>
