@@ -9,7 +9,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: ["https://1vanch0s.github.io", "https://web.telegram.org", "https://f0f9-2a0b-4140-b0d7-00-2.ngrok-free.app "],
+  origin: ["https://1vanch0s.github.io", "https://web.telegram.org", "https://f0f9-2a0b-4140-b0d7-00-2.ngrok-free.app"],
   methods: ["GET", "POST", "PUT", "DELETE"],
   allowedHeaders: ["Content-Type"],
 }));
@@ -111,6 +111,28 @@ const createTables = async () => {
 };
 
 createTables();
+
+// Эндпоинт для регистрации
+app.post('/signup', async (req, res) => {
+    const { username, email, password } = req.body;
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const result = await pool.query(
+            `INSERT INTO users (username, email, password) 
+             VALUES ($1, $2, $3) 
+             RETURNING id, username, email`,
+            [username, email, hashedPassword]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error("Error during signup:", err);
+        if (err.code === '23505') {
+            res.status(400).json({ error: 'Email already exists' });
+        } else {
+            res.status(500).json({ error: 'Failed to sign up' });
+        }
+    }
+});
 
 // Эндпоинт для регистрации
 app.post('/login', async (req, res) => {

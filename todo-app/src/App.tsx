@@ -26,33 +26,31 @@ const App: React.FC = () => {
 
   // Функция для отправки логов на сервер (существующая)
   const sendLogToServer = async (message: string) => {
+    const apiUrl = process.env.REACT_APP_API_URL || "undefined";
+    console.log("API URL:", apiUrl); // Добавь этот лог в консоль браузера
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || "undefined";
-      const logUrl = `${apiUrl}/log`;
-      const logBody = JSON.stringify({ message });
-      await fetch(logUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: logBody,
-      });
-      // Лог успешной отправки (для проверки)
-      await fetch(logUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: `Лог успешно отправлен: ${message}` }),
-      });
+        const logUrl = `${apiUrl}/log`;
+        const logBody = JSON.stringify({ message });
+        await fetch(logUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: logBody,
+        });
+        // Лог успешной отправки
+        await fetch(logUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: `Лог успешно отправлен: ${message}` }),
+        });
     } catch (err) {
-      // Попробуем отправить лог об ошибке
-      const apiUrl = process.env.REACT_APP_API_URL || "undefined";
-      await fetch(`${apiUrl}/log`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: `Ошибка отправки лога: ${(err as Error).message}` }),
-      }).catch(() => {
-        // Если и это не сработало, ничего не делаем
-      });
+        const apiUrl = process.env.REACT_APP_API_URL || "undefined";
+        await fetch(`${apiUrl}/log`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: `Ошибка отправки лога: ${(err as Error).message}` }),
+        }).catch(() => {});
     }
-  };
+};
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
