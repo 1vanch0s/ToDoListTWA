@@ -43,6 +43,9 @@ app.get("/users", async (req, res) => {
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false // Разрешает невалидированные сертификаты (для тестов, убери для продакшена)
+    }
 });
 
 // const initDb = async () => {
