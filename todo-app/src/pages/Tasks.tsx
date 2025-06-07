@@ -58,7 +58,10 @@ interface TasksProps {
 }
 
 const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    const storedTasks = localStorage.getItem("tasks");
+    return storedTasks ? JSON.parse(storedTasks) : [];
+  });
   const [newTask, setNewTask] = useState({ title: "", deadline: "", description: "", difficulty: "easy" as "easy" | "medium" | "hard" });
   const [showLevelUpPopup, setShowLevelUpPopup] = useState(false);
   const [newLevel, setNewLevel] = useState<number | null>(null);
@@ -72,16 +75,20 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
   const [expiredTask, setExpiredTask] = useState<Task | null>(null);
   const [chatId, setChatId] = useState<number | null>(null);
 
-  // Загрузка данных пользователя из Telegram
+  useEffect(() => {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+    syncToServer();
+  }, [tasks]);
+
   const tg = (window as any).Telegram?.WebApp;
-  React.useEffect(() => {
+  useEffect(() => {
     if (!tg) {
       console.error("Telegram WebApp is not available");
       return;
     }
     tg.ready();
     const user = tg.initDataUnsafe.user;
-    console.log("Telegram user data:", tg.initDataUnsafe); // Отладка
+    console.log("Telegram user data:", tg.initDataUnsafe);
     if (user && user.id) {
       setChatId(user.id);
     } else {
@@ -89,14 +96,13 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
     }
   }, []);
 
-  // Функция отправки уведомлений через Telegram Bot API
   const sendNotification = async (message: string) => {
     if (!chatId) {
       console.log("No chatId available");
       return;
     }
 
-    const botToken = import.meta.env.VITE_BOT_TOKEN; 
+    const botToken = import.meta.env.VITE_BOT_TOKEN;
     const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
     try {
       const response = await fetch(url, {
@@ -118,56 +124,26 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
     }
   };
 
-  // Загрузка задач и статистики при монтировании
-  useEffect(() => {
-    try {
-      const storedTasks = localStorage.getItem("tasks");
-      if (storedTasks) {
-        const parsedTasks = JSON.parse(storedTasks);
-        if (Array.isArray(parsedTasks)) {
-          setTasks(parsedTasks);
-        } else {
-          setTasks([]);
-          localStorage.setItem("tasks", JSON.stringify([]));
-        }
-      } else {
-        localStorage.setItem("tasks", JSON.stringify([]));
-        setTasks([]);
-      }
-
-      const storedStats = localStorage.getItem("stats");
-      if (storedStats) {
-        const parsedStats = JSON.parse(storedStats);
-        const migratedStats = {
-          ...initialStats,
-          ...parsedStats,
-          completed: parsedStats.completed || initialStats.completed,
-          failed: parsedStats.failed || initialStats.failed,
-          totalCoins: parsedStats.totalCoins || initialStats.totalCoins,
-          xp: parsedStats.xp || initialStats.xp,
-          level: calculateLevel(parsedStats.xp || 0),
-          totalEarnedCoins: parsedStats.totalEarnedCoins || 0,
-          totalEarnedXp: parsedStats.totalEarnedXp || 0,
-          purchases: parsedStats.purchases || 0,
-        };
-        localStorage.setItem("stats", JSON.stringify(migratedStats));
-      } else {
-        localStorage.setItem("stats", JSON.stringify(initialStats));
-      }
-
-      checkDeadlines();
-    } catch (error) {
-      console.error("Error loading from localStorage:", error);
-      setTasks([]);
-      localStorage.setItem("tasks", JSON.stringify([]));
+  const syncToServer = async () => {
+    if (!chatId) {
+      console.log("Chat ID не доступен, синхронизация отложена");
+      return;
     }
-  }, []);
-
-  // Проверка дедлайнов каждые 10 секунд
-  useEffect(() => {
-    const interval = setInterval(checkDeadlines, 10000);
-    return () => clearInterval(interval);
-  }, [tasks]);
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/tasks/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: chatId.toString(), tasks }),
+      });
+      if (response.ok) {
+        console.log("Данные успешно синхронизированы с сервером");
+      } else {
+        console.log("Синхронизация не удалась, данные остаются в локалке:", await response.text());
+      }
+    } catch (err) {
+      console.log("Сервер недоступен, данные сохранены в локалке:", err);
+    }
+  };
 
   const checkDeadlines = () => {
     const now = new Date();
@@ -188,6 +164,11 @@ const Tasks: React.FC<TasksProps> = ({ updateCoins }) => {
       setShowDeadlinePopup(true);
     }
   };
+
+  useEffect(() => {
+    const interval = setInterval(checkDeadlines, 10000);
+    return () => clearInterval(interval);
+  }, [tasks]);
 
   const addTask = () => {
     if (newTask.title.trim() === "") return;
