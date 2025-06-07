@@ -4,9 +4,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    root: '.', // Указываем текущую папку (todo-app) как корень
+    root: '.', // Текущая папка (todo-app)
     build: {
-      outDir: '../dist', // Сохраняем собранные файлы в корень /ToDoListTWA/dist
+      outDir: 'dist', // Сохраняем внутри todo-app/dist
       assetsDir: 'assets', // Папка для CSS/JS
     },
     base: '/', // Корневой путь для Vercel
