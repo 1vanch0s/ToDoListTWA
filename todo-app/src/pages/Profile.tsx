@@ -98,7 +98,7 @@ const Profile: React.FC = () => {
           <div>
             <h2>{userName}</h2>
             <div className="level-circle">
-              <svg width="100" height="100">
+              <svg role="progressbar" width="100" height="100">
                 <circle
                   cx="50"
                   cy="50"

@@ -1,9 +1,16 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
-  
-}
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "esModuleInterop": true, // Учитываем предупреждение
+    "jsx": "react-jsx",     // Поддержка JSX
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,         // Не компилировать, только проверка типов
+    "isolatedModules": true // Для совместимости с Vite
+  },
+  "include": ["__tests__/**/*", "src/**/*"], // Включаем тесты и исходники
+  "exclude": ["node_modules"]
 
+}
